@@ -19,6 +19,12 @@
  * GitHub Repository: https://github.com/GodExious/CF-Submissions-Ratings
  * If you have any suggestions or find any bugs, please feel free to open an issue!
  * 如果你对本插件有改进建议，欢迎通过 GitHub Issue 提出建议或反馈！
+ *
+ * Inspired by Codeforces-Helper (https://chromewebstore.google.com/detail/codeforces-helper/ahoeafmlmoohkkalcickdnkifpfnolpj)
+ * 灵感来源于 Codeforces-Helper，由于其不支持 status 页面，故仿写并实现了本项目。
+ *
+ * Mainly implemented by Antigravity 1.23.2
+ * 主要由 Antigravity 1.23.2 完成实现
  */
 
 (function () {
