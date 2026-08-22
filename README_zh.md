@@ -15,6 +15,18 @@
 
 一个轻量且高度优化的 Codeforces 油猴（Tampermonkey）脚本，可以在“Status（状态）”和“Submissions（提交记录）”等页面直观、优雅地显示题目的难度分。
 
+## 📸 效果预览
+<p align="center">
+  <img src="imgs/status.png" alt="Status Page" width="800">
+  <br>
+  <em>Status 页面的分数直显效果</em>
+</p>
+<p align="center">
+  <img src="imgs/submissions.png" alt="Submissions Page" width="800">
+  <br>
+  <em>完美兼容个人 Submissions 记录自带的背景高亮</em>
+</p>
+
 ## ✨ 功能特点
 - 在 `submissions` 页面和 `status` 页面直接显示题目的难度分数，并根据难度带有相应的色彩高亮。
 - 题目分数数据通过 Codeforces 官方 API 获取，每天仅在本地更新一次缓存，不会发送过多的网络请求。

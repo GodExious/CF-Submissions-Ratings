@@ -15,6 +15,18 @@
 
 A lightweight, highly optimized Tampermonkey user script for Codeforces that fetches and elegantly displays problem difficulty ratings directly on the Status and Submissions pages. 
 
+## 📸 Screenshots
+<p align="center">
+  <img src="imgs/status.png" alt="Status Page" width="800">
+  <br>
+  <em>Direct rating display on the global Status page</em>
+</p>
+<p align="center">
+  <img src="imgs/submissions.png" alt="Submissions Page" width="800">
+  <br>
+  <em>Seamless integration with your highlighted rows on the Submissions page</em>
+</p>
+
 ## ✨ Features
 - Displays problem difficulty ratings directly on `submissions` and `status` pages, complete with corresponding color highlighting.
 - Fetches problem data via the official Codeforces API and updates locally only once per day, avoiding excessive network requests.
