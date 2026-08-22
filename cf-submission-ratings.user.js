@@ -10,6 +10,8 @@
 // @match        *://codeforces.com/*
 // @match        *://*.codeforces.com/*
 // @icon         https://codeforces.com/favicon.ico
+// @updateURL    https://raw.githubusercontent.com/GodExious/CF-Submissions-Ratings/main/cf-submission-ratings.user.js
+// @downloadURL  https://raw.githubusercontent.com/GodExious/CF-Submissions-Ratings/main/cf-submission-ratings.user.js
 // @run-at       document-end
 // @license      MIT
 // @grant        none
