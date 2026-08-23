@@ -2,7 +2,7 @@
 // @name         CF-Submissions-Ratings
 // @name:zh-CN   Codeforces 提交页/状态页 难度分显示
 // @namespace    https://github.com/GodExious/CF-Submissions-Ratings
-// @version      1.3.5
+// @version      1.4.0
 // @description  Fetches and displays problem difficulty ratings. Adds a new Rating column to status and submissions tables with color-coded backgrounds.
 // @description:zh-CN 自动获取并显示 Codeforces 题目难度分。在 Status 和 Submissions 表格最右侧新增 Rating 列并带有 Codeforces Analytics 风格的色彩高亮，同时完美兼容个人提交记录背景。
 // @author       GodExious & Antigravity
@@ -48,6 +48,20 @@
         if (rating < 2600) return '#FF7777'; // Light Red (Grandmaster)
         if (rating < 3000) return '#FF3333'; // Red (International Grandmaster)
         return '#CC2222'; // Dark Red (Legendary Grandmaster+)
+    }
+
+    // Darker border colors for the roundbox tags
+    function getRatingBorderColor(rating) {
+        if (rating < 1200) return '#AAAAAA'; // Gray
+        if (rating < 1400) return '#44CC44'; // Green
+        if (rating < 1600) return '#44AA88'; // Cyan
+        if (rating < 1900) return '#7777CC'; // Blue
+        if (rating < 2100) return '#CC55CC'; // Violet
+        if (rating < 2300) return '#CC9955'; // Light Orange
+        if (rating < 2400) return '#CC8822'; // Orange
+        if (rating < 2600) return '#CC4444'; // Light Red
+        if (rating < 3000) return '#CC0000'; // Red
+        return '#990000'; // Dark Red
     }
 
     // Fine-grained text colors when appending rating as text next to standalone links
@@ -134,13 +148,48 @@
             return null;
         }
 
-        // 1. Handle Status Tables (table.status-frame-datatable) by adding a new Rating column
-        const statusTables = document.querySelectorAll('table.status-frame-datatable');
+        // 1. Handle Status Tables and Hacks Tables by adding a new Rating column
+        const statusTables = document.querySelectorAll('table.status-frame-datatable, div.datatable table:not(.standings):not(.problems)');
         statusTables.forEach(table => {
-            // First check if header is processed
             const headerRow = table.querySelector('tr');
-            if (headerRow && !headerRow.hasAttribute('data-cf-rating-processed')) {
+            if (!headerRow) return;
+
+            // Find Time/When column index
+            let timeColIdx = -1;
+            let isHacks = window.location.href.includes('/hacks');
+            Array.from(headerRow.cells).forEach((th, idx) => {
+                const text = th.textContent.toLowerCase();
+                if (timeColIdx === -1 && (text.includes('when') || text.includes('time') || text.includes('时间') || text.includes('когда') || text.includes('date'))) {
+                    timeColIdx = idx;
+                }
+                if (text.includes('hacker') || text.includes('defender')) {
+                    isHacks = true;
+                }
+            });
+
+            if (isHacks) {
+                timeColIdx = -1; // Skip time formatting for hacks page
+            }
+
+            // Process Header (Rating Column and Time)
+            if (!headerRow.hasAttribute('data-cf-rating-processed')) {
                 headerRow.setAttribute('data-cf-rating-processed', 'true');
+
+                // Append timezone to Time column header
+                if (timeColIdx !== -1) {
+                    const th = headerRow.cells[timeColIdx];
+                    let tzStr = 'UTC+3'; // Codeforces default server time (MSK)
+
+                    const firstDataRow = table.querySelector('tr:not(:first-child)');
+                    if (firstDataRow && firstDataRow.cells[timeColIdx]) {
+                        const tzMatch = firstDataRow.cells[timeColIdx].textContent.match(/UTC[+-]?\d*(:\d+)?/i);
+                        if (tzMatch) {
+                            tzStr = tzMatch[0].toUpperCase();
+                        }
+                    }
+                    th.innerHTML = `${th.innerHTML}<br><span style="font-size: 0.85em; opacity: 0.8;">(${tzStr})</span>`;
+                    th.style.setProperty('white-space', 'nowrap', 'important');
+                }
 
                 // Remove 'right' class from the previous last header cell
                 const prevTh = headerRow.querySelector('th.right');
@@ -156,8 +205,25 @@
             }
 
             // Process data rows
-            const dataRows = table.querySelectorAll('tr:not([data-cf-rating-processed])');
+            const dataRows = table.querySelectorAll('tr:not(:first-child)');
             dataRows.forEach(row => {
+                // Time Formatting
+                if (timeColIdx !== -1) {
+                    const timeCell = row.cells[timeColIdx];
+                    if (timeCell) {
+                        const text = timeCell.textContent.trim();
+                        // Prevent re-formatting if it already has our format (starts with YYYY-MM-DD)
+                        if (!/^\d{4}-\d{2}-\d{2}/.test(text) && text.length >= 8 && /\d/.test(text)) {
+                            const newTime = formatTimeStr(text);
+                            if (newTime) {
+                                timeCell.innerHTML = newTime;
+                            }
+                        }
+                        timeCell.style.setProperty('white-space', 'nowrap', 'important');
+                    }
+                }
+
+                if (row.hasAttribute('data-cf-rating-processed')) return;
                 row.setAttribute('data-cf-rating-processed', 'true');
 
                 // Skip empty/info rows (like "No submissions found")
@@ -179,8 +245,9 @@
                     const info = getProblemRatingFromHref(link.href);
                     if (info && info.rating) {
                         problemRating = info.rating;
-                        break;
                     }
+                    // Mark ALL problem links in the datatable so the standalone logic ignores them
+                    link.setAttribute('data-cf-rating-added', 'true');
                 }
 
                 // Create new Rating cell
@@ -201,6 +268,118 @@
             });
         });
 
+        // 1.5 Handle Standings tables specifically (adding a whole new row under the header)
+        const standingsTables = document.querySelectorAll('table.standings:not([data-cf-rating-standings-processed])');
+        standingsTables.forEach(table => {
+            table.setAttribute('data-cf-rating-standings-processed', 'true');
+
+            const headerRow = table.querySelector('tr');
+            if (!headerRow) return;
+
+            const ratingRow = document.createElement('tr');
+            ratingRow.className = 'cf-rating-standings-row';
+
+            let hasRatings = false;
+
+            Array.from(headerRow.cells).forEach(cell => {
+                const newCell = document.createElement('th');
+                newCell.style.padding = '0.3em'; // minimal padding
+
+                const link = cell.querySelector('a[href*="/problem/"]');
+                if (link) {
+                    const info = getProblemRatingFromHref(link.href);
+                    if (info && info.rating) {
+                        hasRatings = true;
+                        newCell.textContent = info.rating;
+                        // Color the entire cell just like submission/status
+                        newCell.style.cssText = `background-color: ${getRatingBgColor(info.rating)} !important; color: #000 !important; text-align: center; font-size: 0.9em; padding: 0.2em; font-weight: normal;`;
+
+                        // Mark the link so it's skipped by standalone processor
+                        link.setAttribute('data-cf-rating-added', 'true');
+                    }
+                }
+                ratingRow.appendChild(newCell);
+            });
+
+            if (hasRatings) {
+                // Insert the new rating row right below the header row
+                headerRow.parentNode.insertBefore(ratingRow, headerRow.nextSibling);
+            }
+        });
+
+        // 1.8 Handle Contest Problems tables specifically (adding a new column to the left of '#')
+        const problemsTables = document.querySelectorAll('table.problems:not([data-cf-rating-problems-processed])');
+        problemsTables.forEach(table => {
+            table.setAttribute('data-cf-rating-problems-processed', 'true');
+
+            const headerRow = table.querySelector('tr');
+            if (headerRow) {
+                const th = document.createElement('th');
+                th.className = 'top left';
+                th.style.width = '4em';
+                th.style.textAlign = 'center';
+                th.innerHTML = 'Rating';
+
+                const prevTh = headerRow.firstElementChild;
+                if (prevTh && prevTh.classList.contains('left')) {
+                    prevTh.classList.remove('left');
+                }
+
+                headerRow.insertBefore(th, headerRow.firstElementChild);
+            }
+
+            const dataRows = table.querySelectorAll('tr:not(:first-child)');
+            dataRows.forEach(row => {
+                if (row.cells.length < 2) return;
+
+                const td = document.createElement('td');
+                td.className = 'left';
+                td.style.textAlign = 'center';
+                td.style.verticalAlign = 'middle';
+
+                const prevTd = row.firstElementChild;
+                if (prevTd && prevTd.classList.contains('left')) {
+                    prevTd.classList.remove('left');
+                }
+
+                const idCell = row.querySelector('td.id');
+                const link = idCell ? idCell.querySelector('a') : row.querySelector('a[href*="/problem/"]');
+
+                if (link) {
+                    const info = getProblemRatingFromHref(link.href);
+                    if (info && info.rating) {
+                        td.textContent = info.rating;
+                        // Always keep the difficulty background color for the Rating cell
+                        td.style.cssText = `background-color: ${getRatingBgColor(info.rating)} !important; color: #000 !important; text-align: center; font-weight: normal;`;
+                    }
+
+                    const rowLinks = row.querySelectorAll('a[href*="/problem/"]');
+                    rowLinks.forEach(l => l.setAttribute('data-cf-rating-added', 'true'));
+                }
+
+                row.insertBefore(td, row.firstElementChild);
+
+                // Fix the CF accepted/rejected status styling
+                if (row.classList.contains('accepted-problem')) {
+                    // Remove the green border from the # cell (so it doesn't show in the middle)
+                    if (idCell) idCell.style.setProperty('border-left', '1px solid #e1e1e1', 'important');
+
+                    // Paint ALL other cells in the row with the green background
+                    Array.from(row.cells).forEach(cell => {
+                        if (cell !== td) cell.style.setProperty('background-color', '#d4edc9', 'important');
+                    });
+                } else if (row.classList.contains('rejected-problem')) {
+                    // Remove the red border from the # cell
+                    if (idCell) idCell.style.setProperty('border-left', '1px solid #e1e1e1', 'important');
+
+                    // Paint ALL other cells in the row with the red background
+                    Array.from(row.cells).forEach(cell => {
+                        if (cell !== td) cell.style.setProperty('background-color', '#ffe3e3', 'important');
+                    });
+                }
+            });
+        });
+
         // 2. Handle other standalone problem links (e.g. outside status tables)
         const links = document.querySelectorAll('a[href*="/problem/"]:not([data-cf-rating-added])');
         links.forEach(link => {
@@ -216,16 +395,91 @@
             if (info) {
                 link.setAttribute('data-cf-rating-added', 'true');
                 if (info.rating) {
+                    // Regular inline links, remove the * and use brackets
                     const ratingSpan = document.createElement('span');
-                    ratingSpan.textContent = ` *${info.rating}*`;
+                    ratingSpan.textContent = `[${info.rating}]`;
                     ratingSpan.style.color = getRatingTextColor(info.rating);
-                    ratingSpan.style.marginLeft = '4px';
+                    ratingSpan.style.marginLeft = '6px';
                     ratingSpan.style.fontSize = '0.9em';
                     ratingSpan.title = `Difficulty Rating: ${info.rating}`;
                     ratingSpan.className = 'cf-rating-helper-label';
 
                     link.parentNode.insertBefore(ratingSpan, link.nextSibling);
                 }
+            }
+        });
+
+        // 3. Handle actual Problem Page tags (sidebar tags)
+        const tagBoxes = document.querySelectorAll('span.tag-box:not([data-cf-rating-added])');
+        tagBoxes.forEach(tag => {
+            const text = tag.textContent.trim();
+            if (text.startsWith('*')) {
+                const ratingMatch = text.match(/^\*\s*(\d+)$/);
+                if (ratingMatch && ratingMatch[1]) {
+                    const rating = parseInt(ratingMatch[1], 10);
+                    tag.setAttribute('data-cf-rating-added', 'true');
+
+                    const bgColor = getRatingBgColor(rating);
+                    const borderColor = getRatingBorderColor(rating);
+
+                    // Codeforces wraps the actual tag text in a div.roundbox
+                    // We must color the parent div so the color fills the original padding and border radius
+                    const parentBox = tag.closest('.roundbox');
+                    if (parentBox) {
+                        parentBox.style.setProperty('background-color', bgColor, 'important');
+                        parentBox.style.setProperty('border-color', borderColor, 'important');
+                    }
+
+                    // Style the inner text span
+                    tag.style.setProperty('color', '#000', 'important');
+                    tag.style.setProperty('background-color', 'transparent', 'important');
+                }
+            }
+        });
+    }
+
+    function formatTimeStr(text) {
+        // Extract any UTC suffix (e.g. "UTC+8", "UTC-5", "UTC+3")
+        let tzSuffix = '';
+        const tzMatch = text.match(/UTC[+-]?\d*(:\d+)?/i);
+        if (tzMatch) {
+            tzSuffix = tzMatch[0].toUpperCase();
+        }
+
+        // Clean text for parsing
+        let cleanText = text.replace(/UTC.*$/i, '').trim();
+
+        let d = new Date(cleanText);
+        if (isNaN(d.getTime())) {
+            // Try parsing Russian format: DD.MM.YYYY HH:MM:SS
+            const ruMatch = cleanText.match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}:\d{2}(:\d{2})?)/);
+            if (ruMatch) d = new Date(`${ruMatch[2]}/${ruMatch[1]}/${ruMatch[3]} ${ruMatch[4]}`);
+        }
+
+        if (!isNaN(d.getTime())) {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const min = String(d.getMinutes()).padStart(2, '0');
+            const ss = String(d.getSeconds()).padStart(2, '0');
+
+            return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+        }
+        return null;
+    }
+
+    function applyTimeFormatting() {
+        const timeSpans = document.querySelectorAll('.format-time:not([data-custom-formatted]), .format-date:not([data-custom-formatted])');
+        timeSpans.forEach(span => {
+            const text = span.textContent.trim();
+            if (text.length < 8) return;
+            const newTime = formatTimeStr(text);
+            if (newTime) {
+                span.innerHTML = newTime;
+                span.setAttribute('data-custom-formatted', 'true');
+                span.classList.remove('format-time');
+                span.classList.remove('format-date');
             }
         });
     }
@@ -242,6 +496,7 @@
             }
             if (shouldApply) {
                 applyRatings(ratingsMap);
+                setTimeout(applyTimeFormatting, 500);
             }
         });
 
@@ -252,6 +507,7 @@
     async function init() {
         const ratingsMap = await getRatings();
         applyRatings(ratingsMap);
+        setTimeout(applyTimeFormatting, 500);
         setupObserver(ratingsMap);
     }
 

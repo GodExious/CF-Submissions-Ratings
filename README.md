@@ -1,10 +1,13 @@
 <h1 align="center">CF-Submissions-Ratings</h1>
 
 <p align="center">
-  <strong>English</strong> | <a href="README_zh.md">简体中文</a>
+  <strong>English</strong> | <a href="docs/README_zh.md">简体中文</a>
 </p>
 
 <p align="center">
+  <a href="docs/CHANGELOG.md">
+    <img src="https://img.shields.io/badge/Changelog-v1.4.0-orange?style=flat-square" alt="Changelog">
+  </a>
   <a href="https://github.com/GodExious/CF-Submissions-Ratings/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/GodExious/CF-Submissions-Ratings?style=flat-square&color=blue" alt="License">
   </a>
@@ -19,16 +22,34 @@ A lightweight, highly optimized Tampermonkey user script for Codeforces that fet
 <p align="center">
   <img src="imgs/status.png" alt="Status Page" width="800">
   <br>
-  <em>Direct rating display on the global Status page</em>
+  <em>Direct rating display and optimized time formatting on the Status page</em>
 </p>
 <p align="center">
   <img src="imgs/submissions.png" alt="Submissions Page" width="800">
   <br>
   <em>Seamless integration with your highlighted rows on the Submissions page</em>
 </p>
+<p align="center">
+  <img src="imgs/contest-problem.png" alt="Contest Problems" width="800">
+  <br>
+  <em>Optimized difficulty rating and AC status display on the Contest problem list</em>
+</p>
+<p align="center">
+  <img src="imgs/contest-standings.png" alt="Contest Standings" width="800">
+  <br>
+  <em>Difficulty rating display on the Contest standings page</em>
+</p>
+<p align="center">
+  <img src="imgs/problem-tags.png" alt="Problem Tags" width="800">
+  <br>
+  <em>Added problem rating color display to problem tags</em>
+</p>
 
 ## ✨ Features
-- Displays problem difficulty ratings directly on `submissions` and `status` pages, complete with corresponding color highlighting.
+- Displays problem difficulty ratings directly on `submissions` and `status` pages, with optimized time formatting and table layout.
+- Optimized difficulty rating and AC status display on `contest` pages.
+- Optimized difficulty rating display on `hacks` pages.
+- Added problem rating color display to `problem tags`.
 - Fetches problem data via the official Codeforces API and updates locally only once per day, avoiding excessive network requests.
 
 ## 🚀 Installation
