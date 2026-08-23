@@ -2,7 +2,7 @@
 // @name         CF-Submissions-Ratings
 // @name:zh-CN   Codeforces 提交页/状态页 难度分显示
 // @namespace    https://github.com/GodExious/CF-Submissions-Ratings
-// @version      1.4.1
+// @version      1.4.2
 // @description  Fetches and displays problem difficulty ratings. Adds a new Rating column to status and submissions tables with color-coded backgrounds.
 // @description:zh-CN 自动获取并显示 Codeforces 题目难度分。在 Status 和 Submissions 表格最右侧新增 Rating 列并带有 Codeforces Analytics 风格的色彩高亮，同时完美兼容个人提交记录背景。
 // @author       GodExious & Antigravity
@@ -157,6 +157,8 @@
             // Find Time/When column index
             let timeColIdx = -1;
             let isHacks = window.location.href.includes('/hacks');
+            let isStatusOrHacks = false;
+
             Array.from(headerRow.cells).forEach((th, idx) => {
                 const text = th.textContent.toLowerCase();
                 if (timeColIdx === -1 && (text.includes('when') || text.includes('time') || text.includes('时间') || text.includes('когда') || text.includes('date'))) {
@@ -164,8 +166,14 @@
                 }
                 if (text.includes('hacker') || text.includes('defender')) {
                     isHacks = true;
+                    isStatusOrHacks = true;
+                }
+                if (text.includes('problem') || text.includes('题目') || text.includes('задача')) {
+                    isStatusOrHacks = true;
                 }
             });
+
+            if (!isStatusOrHacks) return; // Skip if it's not a status or hacks table (e.g., contest list)
 
             if (isHacks) {
                 timeColIdx = -1; // Skip time formatting for hacks page
@@ -260,7 +268,7 @@
                     td.textContent = problemRating;
                     // Use !important to override Codeforces' `.highlighted-row` CSS
                     td.style.setProperty('background-color', getRatingBgColor(problemRating), 'important');
-                    td.style.setProperty('color', 'black', 'important');
+                    td.style.setProperty('color', problemRating >= 1600 ? 'white' : 'black', 'important');
                 } else {
                     td.textContent = '';
                 }
@@ -292,7 +300,7 @@
                         hasRatings = true;
                         newCell.textContent = info.rating;
                         // Color the entire cell just like submission/status
-                        newCell.style.cssText = `background-color: ${getRatingBgColor(info.rating)} !important; color: #000 !important; text-align: center; font-size: 0.9em; padding: 0.2em; font-weight: normal;`;
+                        newCell.style.cssText = `background-color: ${getRatingBgColor(info.rating)} !important; color: ${info.rating >= 1600 ? 'white' : '#000'} !important; text-align: center; font-size: 0.9em; padding: 0.2em; font-weight: normal;`;
 
                         // Mark the link so it's skipped by standalone processor
                         link.setAttribute('data-cf-rating-added', 'true');
@@ -350,7 +358,7 @@
                     if (info && info.rating) {
                         td.textContent = info.rating;
                         // Always keep the difficulty background color for the Rating cell
-                        td.style.cssText = `background-color: ${getRatingBgColor(info.rating)} !important; color: #000 !important; text-align: center; font-weight: normal;`;
+                        td.style.cssText = `background-color: ${getRatingBgColor(info.rating)} !important; color: ${info.rating >= 1600 ? 'white' : '#000'} !important; text-align: center; font-weight: normal;`;
                     }
 
                     const rowLinks = row.querySelectorAll('a[href*="/problem/"]');
@@ -431,7 +439,7 @@
                     }
 
                     // Style the inner text span
-                    tag.style.setProperty('color', '#000', 'important');
+                    tag.style.setProperty('color', rating >= 1600 ? 'white' : '#000', 'important');
                     tag.style.setProperty('background-color', 'transparent', 'important');
                 }
             }

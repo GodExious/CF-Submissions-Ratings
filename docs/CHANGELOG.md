@@ -8,6 +8,13 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### v1.4.2
+`2026-08-23 18:25`
+
+- Optimized text readability for higher ratings. For problem ratings `>= 1600` (Blue tier and above), the font color now automatically switches to high-contrast white (`#FFFFFF`).
+
+---
+
 ### v1.4.1
 `2026-08-23 18:00`
 
