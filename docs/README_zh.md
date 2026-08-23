@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="CHANGELOG_zh.md">
-    <img src="https://img.shields.io/badge/更新日志-v1.4.0-orange?style=flat-square" alt="Changelog">
+    <img src="https://img.shields.io/badge/更新日志-v1.5.1-orange?style=flat-square" alt="Changelog">
   </a>
   <a href="https://github.com/GodExious/CF-Submissions-Ratings/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/GodExious/CF-Submissions-Ratings?style=flat-square&color=blue" alt="License">
@@ -16,13 +16,23 @@
   </a>
 </p>
 
-一个轻量且高度优化的 Codeforces 油猴（Tampermonkey）脚本，可以在“Status（状态）”和“Submissions（提交记录）”等页面直观、优雅地显示题目的难度分。
+一个轻量、极客且高度定制化的 Codeforces 增强脚本。全面接管并美化你的 CF 界面：无缝显示全局题目难度分、重塑代码语言图标与用户头像、极简缩写判题状态，为你提供极致的沉浸式刷题体验。
 
 ## 📸 效果预览
+<p align="center">
+  <img src="../imgs/problem-tags.png" alt="Problem Tags" width="800">
+  <br>
+  <em>题目页面的 Rating 颜色标签显示</em>
+</p>
 <p align="center">
   <img src="../imgs/status.png" alt="Status Page" width="800">
   <br>
   <em>Status 页面的分数直显与时间格式化效果</em>
+</p>
+<p align="center">
+  <img src="../imgs/settings.png" alt="Settings Menu" width="800">
+  <br>
+  <em>悬浮设置面板</em>
 </p>
 <p align="center">
   <img src="../imgs/submissions.png" alt="Submissions Page" width="800">
@@ -40,17 +50,16 @@
   <em>Contest 排名页面的难度分展示</em>
 </p>
 <p align="center">
-  <img src="../imgs/problem-tags.png" alt="Problem Tags" width="800">
+  <img src="../imgs/blogs.png" alt="Blogs" width="800">
   <br>
-  <em>题目页面的 Rating 颜色标签显示</em>
+  <em>博客内容页面的用户头像展示</em>
 </p>
 
 ## ✨ 功能特点
-- 在 `submissions` 和 `status` 页面直接显示题目的难度分数，优化了时间格式化和表格布局。
-- 优化了 `contest` 页面的难度分展示和 AC 状态展示。
-- 优化了 `hacks` 页面的难度分展示。
-- 在题目页面的 `problem tag` 中增加了题目 rating 的颜色显示。
-- 题目分数数据通过 Codeforces 官方 API 获取，每天仅在本地更新一次缓存，不会发送过多的网络请求。
+- **🧠 全局难度直显**：在提交、状态、题单、榜单等所有核心页面无缝嵌入题目难度分。支持自由切换「经典色块」与「高级标签」两种 UI 风格。
+- **🎨 视觉体验重构**：自动抓取并显示用户头像与专属编程语言图标（如 C++、Python、Go 等），并提供极简的判题状态缩写（如 `WA`、`TLE`）。
+- **⚙️ 全能控制面板**：悬浮式双语（中/英）配置中心。支持全模块独立开关、自定义时间格式化、图标缩放及专属 AC 颜色定制。
+- **⚡ 零感性能开销**：依托 Codeforces 官方 API 并结合强效的本地缓存策略，每天仅需一次静默更新，完全不拖累网页加载速度。
 ## 🚀 安装说明
 1. 首先，在你的浏览器上安装 [Tampermonkey (油猴)](https://www.tampermonkey.net/) 脚本管理器。
 2. 点击下方链接一键安装脚本：

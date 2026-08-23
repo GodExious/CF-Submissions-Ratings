@@ -8,6 +8,21 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### v1.5.1
+`2026-08-24 01:39`
+
+- Fix: Completely removed the redundant logic of appending `[xxxx]` score text next to problem links on normal pages.
+- Fix: Resolved layout issues in the time column when custom time formatting is disabled, fully restoring the official default style.
+- Feature: Support toggling the difficulty rating display style in the settings panel (Classic "Block" / iView-style "Tag").
+- Feature: Added toggles in the settings panel to control the display of ratings in different areas (Submissions, Status, Hacks, ProblemSet, Contest Problems, Standings, Problem Tags).
+- Feature: Support enabling and customizing time format strings with real-time preview.
+- Feature: Added support for displaying user avatars in tables, with customizable size via settings.
+- Feature: Added support for displaying dedicated language icons (e.g., C++, Python, Go) in the language column, with customizable size.
+- Feature: Added support for minimalist abbreviations of verdict statuses (e.g., `Accepted` -> `AC`, `Time limit exceeded` -> `TLE`).
+- Fix: Resolved an issue where difficulty background highlights were glaring when using dark background plugins (such as Dark Reader, CF-Better).
+
+---
+
 ### v1.5.0
 `2026-08-23 21:50`
 

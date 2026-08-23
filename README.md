@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="docs/CHANGELOG.md">
-    <img src="https://img.shields.io/badge/Changelog-v1.4.0-orange?style=flat-square" alt="Changelog">
+    <img src="https://img.shields.io/badge/Changelog-v1.5.1-orange?style=flat-square" alt="Changelog">
   </a>
   <a href="https://github.com/GodExious/CF-Submissions-Ratings/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/GodExious/CF-Submissions-Ratings?style=flat-square&color=blue" alt="License">
@@ -16,13 +16,23 @@
   </a>
 </p>
 
-A lightweight, highly optimized Tampermonkey user script for Codeforces that fetches and elegantly displays problem difficulty ratings directly on the Status and Submissions pages. 
+A lightweight, highly customizable, and aesthetics-focused Codeforces enhancement script. Take full control of your CF interface: seamlessly display global problem difficulty ratings, revitalize tables with user avatars and language icons, and abbreviate verdicts for the ultimate immersive coding experience.
 
 ## 📸 Screenshots
+<p align="center">
+  <img src="imgs/problem-tags.png" alt="Problem Tags" width="800">
+  <br>
+  <em>Added problem rating color display to problem tags</em>
+</p>
 <p align="center">
   <img src="imgs/status.png" alt="Status Page" width="800">
   <br>
   <em>Direct rating display and optimized time formatting on the Status page</em>
+</p>
+<p align="center">
+  <img src="imgs/settings.png" alt="Settings Menu" width="800">
+  <br>
+  <em>Floating settings panel</em>
 </p>
 <p align="center">
   <img src="imgs/submissions.png" alt="Submissions Page" width="800">
@@ -40,17 +50,16 @@ A lightweight, highly optimized Tampermonkey user script for Codeforces that fet
   <em>Difficulty rating display on the Contest standings page</em>
 </p>
 <p align="center">
-  <img src="imgs/problem-tags.png" alt="Problem Tags" width="800">
+  <img src="imgs/blogs.png" alt="Blogs" width="800">
   <br>
-  <em>Added problem rating color display to problem tags</em>
+  <em>User avatar display on the Blogs content page</em>
 </p>
 
 ## ✨ Features
-- Displays problem difficulty ratings directly on `submissions` and `status` pages, with optimized time formatting and table layout.
-- Optimized difficulty rating and AC status display on `contest` pages.
-- Optimized difficulty rating display on `hacks` pages.
-- Added problem rating color display to `problem tags`.
-- Fetches problem data via the official Codeforces API and updates locally only once per day, avoiding excessive network requests.
+- **🧠 Global Rating Display**: Seamlessly injects problem difficulty ratings into Submissions, Status, Problemsets, and Standings. Supports switching between "Classic Block" and "Premium Tag" UI styles.
+- **🎨 UI Revitalization**: Automatically fetches and displays user avatars and dedicated programming language icons (e.g., C++, Python, Go), featuring minimalist verdict abbreviations (e.g., `WA`, `TLE`).
+- **⚙️ Omnipotent Control Panel**: Floating bilingual (EN/ZH) settings hub. Fully customize toggle zones, time formatting, icon scaling, and your personalized AC background color.
+- **⚡ Zero Performance Overhead**: Powered by official Codeforces APIs with an aggressive local caching strategy. Updates silently once a day to ensure blazing-fast page loads.
 
 ## 🚀 Installation
 1. Install a user script manager like [Tampermonkey](https://www.tampermonkey.net/) for your browser.
