@@ -2,7 +2,7 @@
 // @name         CF-Submissions-Ratings
 // @name:zh-CN   Codeforces 提交页/状态页 难度分显示
 // @namespace    https://github.com/GodExious/CF-Submissions-Ratings
-// @version      1.4.0
+// @version      1.4.1
 // @description  Fetches and displays problem difficulty ratings. Adds a new Rating column to status and submissions tables with color-coded backgrounds.
 // @description:zh-CN 自动获取并显示 Codeforces 题目难度分。在 Status 和 Submissions 表格最右侧新增 Rating 列并带有 Codeforces Analytics 风格的色彩高亮，同时完美兼容个人提交记录背景。
 // @author       GodExious & Antigravity
@@ -212,8 +212,8 @@
                     const timeCell = row.cells[timeColIdx];
                     if (timeCell) {
                         const text = timeCell.textContent.trim();
-                        // Prevent re-formatting if it already has our format (starts with YYYY-MM-DD)
-                        if (!/^\d{4}-\d{2}-\d{2}/.test(text) && text.length >= 8 && /\d/.test(text)) {
+                        // Prevent re-formatting if it already has our format (starts with YYYY/MM/DD or YYYY-MM-DD)
+                        if (!/^\d{4}[-\/]\d{2}[-\/]\d{2}/.test(text) && text.length >= 8 && /\d/.test(text)) {
                             const newTime = formatTimeStr(text);
                             if (newTime) {
                                 timeCell.innerHTML = newTime;
@@ -464,7 +464,7 @@
             const min = String(d.getMinutes()).padStart(2, '0');
             const ss = String(d.getSeconds()).padStart(2, '0');
 
-            return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+            return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
         }
         return null;
     }

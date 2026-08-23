@@ -8,6 +8,13 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### v1.4.1
+`2026-08-23 18:00`
+
+- Changed the time formatting from `yyyy-mm-dd hh:mm` to `yyyy/mm/dd hh:mm` for better readability.
+
+---
+
 ### v1.4.0
 `2026-08-23 17:33`
 
