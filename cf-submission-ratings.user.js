@@ -2,7 +2,7 @@
 // @name         CF-Submissions-Ratings
 // @name:zh-CN   Codeforces 提交页/状态页 难度分显示
 // @namespace    https://github.com/GodExious/CF-Submissions-Ratings
-// @version      1.4.2
+// @version      1.5.0
 // @description  Fetches and displays problem difficulty ratings. Adds a new Rating column to status and submissions tables with color-coded backgrounds.
 // @description:zh-CN 自动获取并显示 Codeforces 题目难度分。在 Status 和 Submissions 表格最右侧新增 Rating 列并带有 Codeforces Analytics 风格的色彩高亮，同时完美兼容个人提交记录背景。
 // @author       GodExious & Antigravity
@@ -13,6 +13,7 @@
 // @updateURL    https://raw.githubusercontent.com/GodExious/CF-Submissions-Ratings/main/cf-submission-ratings.user.js
 // @downloadURL  https://raw.githubusercontent.com/GodExious/CF-Submissions-Ratings/main/cf-submission-ratings.user.js
 // @run-at       document-end
+// @require      https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js
 // @license      MIT
 // @grant        none
 // ==/UserScript==
@@ -35,6 +36,77 @@
     const CACHE_KEY = 'cf_problems_ratings';
     const CACHE_TIME_KEY = 'cf_problems_ratings_time';
     const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 1 day in milliseconds
+
+    // Settings Management
+    const SETTINGS_KEY = 'cf_submissions_settings';
+    const DEFAULT_SETTINGS = {
+        acBgColor: 'rgba(212, 237, 201, 1)'
+    };
+
+    function hexToRgba(hex, alpha) {
+        if (!hex || !hex.startsWith('#')) return hex || DEFAULT_SETTINGS.acBgColor;
+        let r = parseInt(hex.slice(1, 3), 16),
+            g = parseInt(hex.slice(3, 5), 16),
+            b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function saveSettings(settings) {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
+
+    function getSettings() {
+        const saved = localStorage.getItem(SETTINGS_KEY);
+        if (saved) {
+            try {
+                let parsed = JSON.parse(saved);
+                // Migrate from split hex+alpha to unified RGBA
+                if (parsed.acBgAlpha !== undefined && parsed.acBgColor && parsed.acBgColor.startsWith('#')) {
+                    parsed.acBgColor = hexToRgba(parsed.acBgColor, parsed.acBgAlpha);
+                    delete parsed.acBgAlpha;
+                    saveSettings(parsed);
+                }
+                return { ...DEFAULT_SETTINGS, ...parsed };
+            } catch (e) {
+                console.error('Failed to parse settings', e);
+            }
+        }
+        return DEFAULT_SETTINGS;
+    }
+
+    const appSettings = getSettings();
+
+    // Inject Global Custom CSS for AC Background
+    const customStyle = document.createElement('style');
+    customStyle.innerHTML = `
+        tr.accepted-problem td {
+            background-color: ${appSettings.acBgColor} !important;
+        }
+        .pcr-app {
+            z-index: 9999999 !important;
+        }
+        /* Widen the Pickr nano theme and adjust interaction layout */
+        .pcr-app[data-theme="nano"] {
+            width: 240px !important;
+        }
+        .pcr-app[data-theme="nano"] .pcr-interaction {
+            flex-wrap: wrap !important;
+        }
+        .pcr-app[data-theme="nano"] .pcr-interaction .pcr-result {
+            flex: 1 1 100% !important;
+            width: 100% !important;
+            min-width: 100% !important;
+            margin-top: 8px !important;
+            font-size: 13px !important;
+        }
+    `;
+    document.head.appendChild(customStyle);
+
+    // Inject Pickr CSS
+    const pickrCss = document.createElement('link');
+    pickrCss.rel = 'stylesheet';
+    pickrCss.href = 'https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css';
+    document.head.appendChild(pickrCss);
 
     // Fine-grained background colors matching Codeforces Analytics / extended rating systems
     function getRatingBgColor(rating) {
@@ -374,7 +446,7 @@
 
                     // Paint ALL other cells in the row with the green background
                     Array.from(row.cells).forEach(cell => {
-                        if (cell !== td) cell.style.setProperty('background-color', '#d4edc9', 'important');
+                        if (cell !== td) cell.style.setProperty('background-color', appSettings.acBgColor, 'important');
                     });
                 } else if (row.classList.contains('rejected-problem')) {
                     // Remove the red border from the # cell
@@ -519,10 +591,145 @@
         setupObserver(ratingsMap);
     }
 
+    function createSettingsUI() {
+        const container = document.createElement('div');
+        container.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 999999;
+            font-family: Arial, sans-serif;
+        `;
+
+        const btn = document.createElement('div');
+        btn.innerHTML = '⚙️';
+        btn.title = 'CF Submissions Ratings Settings';
+        btn.style.cssText = `
+            width: 44px;
+            height: 44px;
+            background: #ffffff;
+            border: 1px solid #dcdcdc;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            user-select: none;
+        `;
+        btn.onmouseover = () => { btn.style.transform = 'scale(1.1)'; btn.style.boxShadow = '0 4px 15px rgba(0,0,0,0.15)'; };
+        btn.onmouseout = () => { btn.style.transform = 'scale(1)'; btn.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)'; };
+
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: absolute;
+            bottom: 55px;
+            right: 0;
+            width: 280px;
+            background: #ffffff;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            padding: 16px;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            color: #333;
+        `;
+
+        const header = document.createElement('div');
+        header.style.cssText = `
+            font-size: 16px;
+            font-weight: bold;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 5px;
+        `;
+        header.textContent = '插件设置 (Settings)';
+        modal.appendChild(header);
+
+        // AC Bg Color Setting
+        const row1 = document.createElement('div');
+        row1.style.cssText = `display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;`;
+
+        const label1 = document.createElement('span');
+        label1.textContent = 'AC 颜色 (AC Color)';
+        label1.style.fontSize = '14px';
+
+        const colorPickerContainer = document.createElement('div');
+
+        row1.appendChild(label1);
+        row1.appendChild(colorPickerContainer);
+        modal.appendChild(row1);
+
+        // Initialize Pickr unified RGBA picker
+        let selectedColor = appSettings.acBgColor;
+        if (window.Pickr) {
+            const pickr = Pickr.create({
+                el: colorPickerContainer,
+                theme: 'nano', // Mimics Chrome devtools
+                default: appSettings.acBgColor,
+                position: 'top-end',
+                components: {
+                    preview: true,
+                    opacity: true,
+                    hue: true,
+                    interaction: {
+                        hex: true,
+                        rgba: true,
+                        input: true,
+                        clear: false,
+                        save: false
+                    }
+                }
+            });
+
+            pickr.on('change', (color) => {
+                selectedColor = color.toRGBA().toString(0);
+            });
+        }
+
+        const saveBtn = document.createElement('button');
+        saveBtn.textContent = '保存并刷新 (Save & Reload)';
+        saveBtn.style.cssText = `
+            margin-top: 10px;
+            padding: 10px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.2s;
+        `;
+        saveBtn.onmouseover = () => saveBtn.style.background = '#40a9ff';
+        saveBtn.onmouseout = () => saveBtn.style.background = '#1890ff';
+
+        saveBtn.onclick = () => {
+            appSettings.acBgColor = selectedColor;
+            saveSettings(appSettings);
+            location.reload();
+        };
+
+        modal.appendChild(saveBtn);
+
+        btn.onclick = () => {
+            modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
+        };
+
+        container.appendChild(modal);
+        container.appendChild(btn);
+        document.body.appendChild(container);
+    }
+
     // Run when the page is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', () => { init(); createSettingsUI(); });
     } else {
         init();
+        createSettingsUI();
     }
 })();

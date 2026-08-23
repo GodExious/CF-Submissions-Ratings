@@ -8,6 +8,14 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### v1.5.0
+`2026-08-23 21:50`
+
+- Added a floating "Settings" menu at the bottom right corner of the page.
+- Added support for customizing the AC (Accepted) background color via the settings menu, with configuration persisted locally.
+
+---
+
 ### v1.4.2
 `2026-08-23 18:25`
 
