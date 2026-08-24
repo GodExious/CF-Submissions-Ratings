@@ -8,6 +8,16 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### v1.5.2
+`2026-08-24 14:15`
+
+- Fix: Fixed an issue where injected avatars in non-data tables (like the Recent Actions page) could be pushed to the line above due to text wrapping or incorrect table layout detection.
+- Fix: Prevented redundant avatar rendering on Codeforces profile pages and near native large avatar containers to maintain a clean UI.
+- Fix: Fixed an issue where the C language variants (e.g., "C11") and the D language were missing icons in the submission status table. Added custom SVG icons for C (Green) and D.
+- Improvement: Mapped Node.js and Delphi to their respective language icons correctly.
+
+---
+
 ### v1.5.1
 `2026-08-24 01:39`
 

@@ -2,7 +2,7 @@
 // @name         CF-Submissions-Ratings
 // @name:zh-CN   Codeforces 提交页/状态页 难度分显示
 // @namespace    https://github.com/GodExious/CF-Submissions-Ratings
-// @version      1.5.1
+// @version      1.5.2
 // @description  Fetches and displays problem difficulty ratings. Adds a new Rating column to status and submissions tables with color-coded backgrounds.
 // @description:zh-CN 自动获取并显示 Codeforces 题目难度分。在 Status 和 Submissions 表格最右侧新增 Rating 列并带有 Codeforces Analytics 风格的色彩高亮，同时完美兼容个人提交记录背景。
 // @author       GodExious & Antigravity
@@ -118,14 +118,17 @@
         if (/\bgo\b/.test(langStr)) return 'go';
         if (langStr.includes('kotlin')) return 'kotlin';
         if (langStr.includes('ruby')) return 'ruby';
-        if (langStr.includes('javascript') || langStr.includes('node.js') || langStr.includes('v8')) return 'javascript';
+        if (langStr.includes('node.js') || langStr.includes('nodejs')) return 'nodejs';
+        if (langStr.includes('javascript') || langStr.includes('v8')) return 'javascript';
         if (langStr.includes('php')) return 'php';
         if (langStr.includes('haskell')) return 'haskell';
         if (langStr.includes('scala')) return 'scala';
         if (langStr.includes('ocaml')) return 'ocaml';
         if (langStr.includes('perl')) return 'perl';
         if (langStr.includes('f#')) return 'fsharp';
-        if (langStr.includes('gcc') || langStr.includes('clang') || /\bc\b/.test(langStr)) return 'c';
+        if (langStr.includes('delphi')) return 'delphi';
+        if (/\bd\b/.test(langStr) || langStr.includes('dmd')) return 'd';
+        if (langStr.includes('gcc') || langStr.includes('clang') || /\bc(?:89|99|11|17|18|23|2x)?\b/.test(langStr)) return 'c';
         return null;
     }
 
@@ -223,7 +226,7 @@
     // Auto dark theme detection
     const isDarkTheme = () => {
         // Dark Reader will handle inverting our light colors automatically as long as we don't use !important
-        if (document.querySelector('.darkreader') || document.querySelector('meta[name="darkreader"]')) return false; 
+        if (document.querySelector('.darkreader') || document.querySelector('meta[name="darkreader"]')) return false;
         if (document.documentElement.getAttribute('data-theme') === 'dark' || document.body.classList.contains('dark')) return true;
         try {
             const bodyBg = window.getComputedStyle(document.body).backgroundColor;
@@ -232,7 +235,7 @@
                 const brightness = (parseInt(match[1]) * 299 + parseInt(match[2]) * 587 + parseInt(match[3]) * 114) / 1000;
                 if (brightness < 128) return true;
             }
-        } catch (e) {}
+        } catch (e) { }
         return false;
     };
 
@@ -362,7 +365,7 @@
         function applyRatingStyle(cell, rating) {
             cell.style.textAlign = 'center';
             cell.style.verticalAlign = 'middle';
-            
+
             if (appSettings.displayStyle === 'tag') {
                 cell.textContent = '';
                 cell.style.setProperty('background-color', 'transparent', 'important');
@@ -403,46 +406,46 @@
             }
             return null;
         }
-    // Walk through nodes to replace verdict text with abbreviations
-    function walkAndReplaceVerdict(node) {
-        if (node.nodeType === Node.TEXT_NODE) {
-            let txt = node.textContent;
-            if (!txt.trim()) return;
-            
-            const map = {
-                'Accepted': 'AC',
-                'Wrong answer': 'WA',
-                'Time limit exceeded': 'TLE',
-                'Memory limit exceeded': 'MLE',
-                'Runtime error': 'RE',
-                'Compilation error': 'CE',
-                'Idleness limit exceeded': 'ILE',
-                'Presentation error': 'PE',
-                'Skipped': 'SK'
-            };
-            
-            let matched = false;
-            let htmlStr = txt;
-            for (let key in map) {
-                const regex = new RegExp(key, 'gi');
-                if (regex.test(htmlStr)) {
-                    matched = true;
-                    htmlStr = htmlStr.replace(regex, `<b>${map[key]}</b>`);
+        // Walk through nodes to replace verdict text with abbreviations
+        function walkAndReplaceVerdict(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                let txt = node.textContent;
+                if (!txt.trim()) return;
+
+                const map = {
+                    'Accepted': 'AC',
+                    'Wrong answer': 'WA',
+                    'Time limit exceeded': 'TLE',
+                    'Memory limit exceeded': 'MLE',
+                    'Runtime error': 'RE',
+                    'Compilation error': 'CE',
+                    'Idleness limit exceeded': 'ILE',
+                    'Presentation error': 'PE',
+                    'Skipped': 'SK'
+                };
+
+                let matched = false;
+                let htmlStr = txt;
+                for (let key in map) {
+                    const regex = new RegExp(key, 'gi');
+                    if (regex.test(htmlStr)) {
+                        matched = true;
+                        htmlStr = htmlStr.replace(regex, `<b>${map[key]}</b>`);
+                    }
+                }
+
+                if (matched) {
+                    const span = document.createElement('span');
+                    span.innerHTML = htmlStr;
+                    node.parentNode.replaceChild(span, node);
+                }
+            } else {
+                const children = Array.from(node.childNodes);
+                for (let i = 0; i < children.length; i++) {
+                    walkAndReplaceVerdict(children[i]);
                 }
             }
-            
-            if (matched) {
-                const span = document.createElement('span');
-                span.innerHTML = htmlStr;
-                node.parentNode.replaceChild(span, node);
-            }
-        } else {
-            const children = Array.from(node.childNodes);
-            for (let i = 0; i < children.length; i++) {
-                walkAndReplaceVerdict(children[i]);
-            }
         }
-    }
 
         // 1. Handle Status Tables and Hacks Tables by adding a new Rating column
         const statusTables = document.querySelectorAll('table.status-frame-datatable, div.datatable table:not(.standings):not(.problems)');
@@ -515,12 +518,12 @@
                         th.style.setProperty('white-space', 'nowrap', 'important');
                     }
                 }
-                
+
                 if (langColIdx !== -1 && appSettings.show && appSettings.show.langIcon !== false) {
                     headerRow.cells[langColIdx].style.setProperty('text-align', 'left', 'important');
                     headerRow.cells[langColIdx].style.setProperty('white-space', 'nowrap', 'important');
                 }
-                
+
                 if (verdictColIdx !== -1 && appSettings.show && appSettings.show.shortVerdict) {
                     headerRow.cells[verdictColIdx].style.setProperty('white-space', 'nowrap', 'important');
                 }
@@ -574,19 +577,26 @@
                                 const sizePx = 14 * (appSettings.langIconSize || 1.0);
                                 const img = document.createElement('img');
                                 let svgName = `${iconName}-original.svg`;
+                                let customSrc = null;
                                 if (iconName === 'go') svgName = 'go-original-wordmark.svg';
-                                img.src = `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconName}/${svgName}`;
+                                if (iconName === 'c') {
+                                    customSrc = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTI4IDEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSIjMmM5YTQyIiBkPSJNMTE4Ljc2NiA5NS44MmMuODktMS41NDMgMS40NDEtMy4yOCAxLjQ0MS00Ljg0M1YzNi43OGMwLTEuNTU4LS41NS0zLjI5Ny0xLjQ0MS00Ljg0bC01NS4zMiAzMS45NFptMCAwIi8+PHBhdGggZmlsbD0iIzFiNmQyZSIgZD0ibTY4LjM2IDEyNi41ODYgNDYuOTMzLTI3LjA5NGMxLjM1Mi0uNzgxIDIuNTgyLTIuMTI5IDMuNDczLTMuNjcybC01NS4zMi0zMS45NEw4LjEyIDk1LjgyYy44OSAxLjU0MyAyLjEyMSAyLjg5IDMuNDczIDMuNjcybDQ2LjkzMyAyNy4wOTRjMi43MDMgMS41NjIgNy4xMyAxLjU2MiA5LjgzMiAwWm0wIDAiLz48cGF0aCBmaWxsPSIjNWNjYjc0IiBkPSJNMTE4Ljc2NiAzMS45NDFjLS44OTEtMS41NDYtMi4xMjEtMi44OTQtMy40NzMtMy42NzFMNjguMzU5IDEuMTcyYy0yLjcwMy0xLjU2My03LjEyOS0xLjU2My05LjgzMiAwTDExLjU5NCAyOC4yN0M4Ljg5IDI5LjgyOCA2LjY4IDMzLjY2IDYuNjggMzYuNzh2NTQuMTk2YzAgMS41NjIuNTUgMy4zIDEuNDQxIDQuODQzTDYzLjQ0NSA2My44OFptMCAwIi8+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTYzLjQ0NSAyNi4wMzVjLTIwLjg2NyAwLTM3Ljg0MyAxNi45NzctMzcuODQzIDM3Ljg0NHMxNi45NzYgMzcuODQ0IDM3Ljg0MyAzNy44NDRjMTMuNDY1IDAgMjYuMDI0LTcuMjQ3IDMyLjc3LTE4LjkxTDc5Ljg0IDczLjMzNWMtMy4zOCA1Ljg0LTkuNjYgOS40NjUtMTYuMzk1IDkuNDY1LTEwLjQzMyAwLTE4LjkyMi04LjQ4OC0xOC45MjItMTguOTIyIDAtMTAuNDM0IDguNDktMTguOTIyIDE4LjkyMi0xOC45MjIgNi43MyAwIDEzLjAxNyAzLjYyOSAxNi4zOSA5LjQ2NWwxNi4zOC05LjQ3N2MtNi43NS0xMS42NjQtMTkuMzA1LTE4LjkxLTMyLjc3LTE4LjkxeiIvPjwvc3ZnPg==';
+                                }
+                                if (iconName === 'd') {
+                                    customSrc = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTI4IDEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSIjYjAxYzJlIiBkPSJNMTE4Ljc2NiA5NS44MmMuODktMS41NDMgMS40NDEtMy4yOCAxLjQ0MS00Ljg0M1YzNi43OGMwLTEuNTU4LS41NS0zLjI5Ny0xLjQ0MS00Ljg0bC01NS4zMiAzMS45NFptMCAwIi8+PHBhdGggZmlsbD0iIzhhMTIyMSIgZD0ibTY4LjM2IDEyNi41ODYgNDYuOTMzLTI3LjA5NGMxLjM1Mi0uNzgxIDIuNTgyLTIuMTI5IDMuNDczLTMuNjcybC01NS4zMi0zMS45NEw4LjEyIDk1LjgyYy44OSAxLjU0MyAyLjEyMSAyLjg5IDMuNDczIDMuNjcybDQ2LjkzMyAyNy4wOTRjMi43MDMgMS41NjIgNy4xMyAxLjU2MiA5LjgzMiAwWm0wIDAiLz48cGF0aCBmaWxsPSIjZDkzODRkIiBkPSJNMTE4Ljc2NiAzMS45NDFjLS44OTEtMS41NDYtMi4xMjEtMi44OTQtMy40NzMtMy42NzFMNjguMzU5IDEuMTcyYy0yLjcwMy0xLjU2My03LjEyOS0xLjU2My05LjgzMiAwTDExLjU5NCAyOC4yN0M4Ljg5IDI5LjgyOCA2LjY4IDMzLjY2IDYuNjggMzYuNzh2NTQuMTk2YzAgMS41NjIuNTUgMy4zIDEuNDQxIDQuODQzTDYzLjQ0NSA2My44OFptMCAwIi8+PHBhdGggZmlsbD0iI2ZmZiIgZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNMzUgMjYuMyB2NzUuNCBoMjAgYSAzNy43IDM3LjcgMCAwIDAgMCAtNzUuNCB6IE01MCA0MS4zIGg1IGEgMjIuNyAyMi43IDAgMCAxIDAgNDUuNCBoLTUgeiIvPjwvc3ZnPg==';
+                                }
+                                img.src = customSrc || `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconName}/${svgName}`;
                                 img.style.cssText = `width: ${sizePx}px; height: ${sizePx}px; vertical-align: middle; margin-right: 5px;`;
-                                
+
                                 const textSpan = document.createElement('span');
                                 textSpan.textContent = langText;
                                 textSpan.style.cssText = 'display: inline-block; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;';
-                                
+
                                 langCell.innerHTML = '';
                                 langCell.appendChild(img);
                                 langCell.appendChild(textSpan);
                                 langCell.title = langText;
-                                
+
                                 langCell.style.setProperty('white-space', 'nowrap', 'important');
                                 langCell.style.setProperty('max-width', '140px', 'important');
                             }
@@ -801,7 +811,7 @@
                         }
                         tag.style.setProperty('color', rating >= 1600 ? 'white' : '#000', 'important');
                     }
-                    
+
                     tag.style.setProperty('background-color', 'transparent', 'important');
                 }
             }
@@ -882,6 +892,9 @@
             // Skip if it already has an img (like titlePhoto or similar icon)
             if (link.querySelector('img')) return;
 
+            // Skip if it's inside a native CF avatar container or profile main-info
+            if (link.closest('.avatar, .main-info')) return;
+
             // Skip if it's a post author or comment author (they already have native CF avatars)
             // Mentions inside the text body (.ttypography) should still receive avatars.
             if (link.closest('.comment, .topic') && !link.closest('.ttypography')) return;
@@ -903,7 +916,7 @@
         try {
             const cached = localStorage.getItem(AVATAR_CACHE_KEY);
             if (cached) avatarCache = JSON.parse(cached);
-        } catch (e) {}
+        } catch (e) { }
 
         const now = Date.now();
         let missingHandles = [];
@@ -963,26 +976,26 @@
             img.src = url;
             img.style.cssText = `width: ${size}em; height: ${size}em; border-radius: 50%; vertical-align: middle; margin-right: 4px; border: 1px solid rgba(0,0,0,0.1); display: inline-block; object-fit: cover;`;
 
-            const isTableLayout = td && !el.closest('.ttypography');
+            const isTableLayout = td && el.closest('table.status-frame-datatable, div.datatable table, table.standings, table.rtable') && !el.closest('.ttypography');
 
             if (isTableLayout) {
                 // Ensure the column containing the user is left-aligned
                 td.style.setProperty('text-align', 'left', 'important');
-                
+
                 // Fetch or create the avatar container at the very beginning of the cell (before Team Name, flags, etc)
                 let avatarContainer = td.querySelector('.cf-avatar-container');
                 if (!avatarContainer) {
                     avatarContainer = document.createElement('span');
                     avatarContainer.className = 'cf-avatar-container';
                     avatarContainer.style.cssText = 'white-space: nowrap; vertical-align: middle; margin-right: 4px; display: inline-block;';
-                    
+
                     const lineWrapper = document.createElement('span');
                     lineWrapper.className = 'cf-avatar-line-wrapper';
                     lineWrapper.style.cssText = 'white-space: nowrap; display: inline-block; max-width: 100%;';
-                    
+
                     td.insertBefore(lineWrapper, td.firstChild);
                     lineWrapper.appendChild(avatarContainer);
-                    
+
                     let current = lineWrapper.nextSibling;
                     while (current) {
                         if (current.tagName === 'BR') break;
@@ -991,16 +1004,17 @@
                         current = next;
                     }
                 }
-                
+
                 // Wrap the image in an anchor so it links to the user profile
                 const anchor = document.createElement('a');
                 anchor.href = el.href;
                 anchor.title = el.textContent.trim();
                 anchor.appendChild(img);
-                
+
                 avatarContainer.appendChild(anchor);
             } else {
                 // Fallback for non-table elements (e.g., profile page, header)
+                el.style.setProperty('white-space', 'nowrap', 'important');
                 el.insertBefore(img, el.firstChild);
             }
         });
@@ -1159,8 +1173,8 @@
         };
         updateLangUI();
 
-        let checkIfChanged = () => {};
-        
+        let checkIfChanged = () => { };
+
         langBtn.onclick = () => {
             currentLang = currentLang === 'zh' ? 'en' : 'zh';
             updateTexts();
@@ -1191,7 +1205,7 @@
             user-select: none;
             width: 120px;
         `;
-        
+
         const slider = document.createElement('div');
         slider.style.cssText = `
             position: absolute;
@@ -1203,14 +1217,14 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.2);
             box-sizing: border-box;
         `;
-        
+
         const styleBlockBtn = document.createElement('div');
         const styleTagBtn = document.createElement('div');
         let currentDisplayStyle = appSettings.displayStyle || 'block';
 
         const updateStyleUI = () => {
             const btnBase = 'flex: 1; text-align: center; padding: 2px 0; font-size: 12px; z-index: 1; transition: color 0.25s; box-sizing: border-box; margin: 1px;';
-            
+
             if (currentDisplayStyle === 'block') {
                 slider.style.left = '2px';
                 slider.style.background = getRatingBgColor(2400);
@@ -1305,7 +1319,7 @@
         rowAvatarSize.style.cssText = `display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;`;
         const labelAvatarSize = document.createElement('span');
         labelAvatarSize.style.cssText = 'font-size: 13px; color: #555;';
-        
+
         const avatarSizeInput = document.createElement('input');
         avatarSizeInput.type = 'range';
         avatarSizeInput.min = '0.8';
@@ -1313,27 +1327,27 @@
         avatarSizeInput.step = '0.1';
         avatarSizeInput.value = appSettings.avatarSize || 1.4;
         avatarSizeInput.style.cssText = 'width: 100px; cursor: pointer;';
-        
+
         const avatarSizeVal = document.createElement('span');
         avatarSizeVal.style.cssText = 'font-size: 12px; width: 28px; text-align: right; display: inline-block;';
         avatarSizeVal.textContent = parseFloat(avatarSizeInput.value).toFixed(1) + 'x';
-        
+
         avatarSizeInput.oninput = () => {
             avatarSizeVal.textContent = parseFloat(avatarSizeInput.value).toFixed(1) + 'x';
             checkIfChanged();
         };
-        
+
         const sizeWrapper = document.createElement('div');
         sizeWrapper.style.display = 'flex';
         sizeWrapper.style.alignItems = 'center';
         sizeWrapper.style.gap = '5px';
         sizeWrapper.appendChild(avatarSizeInput);
         sizeWrapper.appendChild(avatarSizeVal);
-        
+
         rowAvatarSize.appendChild(labelAvatarSize);
         rowAvatarSize.appendChild(sizeWrapper);
         modal.appendChild(rowAvatarSize);
-        
+
         cbAvatar.onchange = () => {
             rowAvatarSize.style.display = cbAvatar.checked ? 'flex' : 'none';
             checkIfChanged();
@@ -1368,7 +1382,7 @@
         rowLangIconSize.style.cssText = `display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;`;
         const labelLangIconSize = document.createElement('span');
         labelLangIconSize.style.cssText = 'font-size: 13px; color: #555;';
-        
+
         const langIconSizeInput = document.createElement('input');
         langIconSizeInput.type = 'range';
         langIconSizeInput.min = '0.5';
@@ -1376,27 +1390,27 @@
         langIconSizeInput.step = '0.1';
         langIconSizeInput.value = appSettings.langIconSize || 1.0;
         langIconSizeInput.style.cssText = 'width: 100px; cursor: pointer;';
-        
+
         const langIconSizeVal = document.createElement('span');
         langIconSizeVal.style.cssText = 'font-size: 12px; width: 28px; text-align: right; display: inline-block;';
         langIconSizeVal.textContent = parseFloat(langIconSizeInput.value).toFixed(1) + 'x';
-        
+
         langIconSizeInput.oninput = () => {
             langIconSizeVal.textContent = parseFloat(langIconSizeInput.value).toFixed(1) + 'x';
             checkIfChanged();
         };
-        
+
         const sizeWrapperLang = document.createElement('div');
         sizeWrapperLang.style.display = 'flex';
         sizeWrapperLang.style.alignItems = 'center';
         sizeWrapperLang.style.gap = '5px';
         sizeWrapperLang.appendChild(langIconSizeInput);
         sizeWrapperLang.appendChild(langIconSizeVal);
-        
+
         rowLangIconSize.appendChild(labelLangIconSize);
         rowLangIconSize.appendChild(sizeWrapperLang);
         modal.appendChild(rowLangIconSize);
-        
+
         rowLangIconSize.style.display = cbLangIcon.checked ? 'flex' : 'none';
 
         // Short Verdict Setting
@@ -1550,7 +1564,7 @@
             if (cbShortVerdict.checked !== !!appSettings.show.shortVerdict) changed = true;
             if (parseFloat(langIconSizeInput.value) !== (appSettings.langIconSize || 1.0)) changed = true;
             if (parseFloat(avatarSizeInput.value) !== (appSettings.avatarSize || 1.4)) changed = true;
-            
+
             showSettingsMap.forEach(item => {
                 if (checkBoxes[item.key] && checkBoxes[item.key].checked !== (appSettings.show[item.key] ?? DEFAULT_SETTINGS.show[item.key])) {
                     changed = true;
@@ -1622,7 +1636,7 @@
             }
             appSettings.timeFormat.enabled = timeToggle.checked;
             appSettings.timeFormat.format = timeInput.value || 'YYYY/MM/DD HH:mm';
-            
+
             appSettings.lang = currentLang;
             appSettings.displayStyle = currentDisplayStyle;
 
