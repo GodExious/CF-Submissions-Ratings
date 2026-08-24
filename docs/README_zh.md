@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="CHANGELOG_zh.md">
-    <img src="https://img.shields.io/badge/更新日志-v1.5.1-orange?style=flat-square" alt="Changelog">
+    <img src="https://img.shields.io/badge/更新日志-v1.5.3-orange?style=flat-square" alt="Changelog">
   </a>
   <a href="https://github.com/GodExious/CF-Submissions-Ratings/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/GodExious/CF-Submissions-Ratings?style=flat-square&color=blue" alt="License">

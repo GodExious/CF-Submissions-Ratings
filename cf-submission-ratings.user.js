@@ -2,7 +2,7 @@
 // @name         CF-Submissions-Ratings
 // @name:zh-CN   Codeforces 提交页/状态页 难度分显示
 // @namespace    https://github.com/GodExious/CF-Submissions-Ratings
-// @version      1.5.2
+// @version      1.5.3
 // @description  Fetches and displays problem difficulty ratings. Adds a new Rating column to status and submissions tables with color-coded backgrounds.
 // @description:zh-CN 自动获取并显示 Codeforces 题目难度分。在 Status 和 Submissions 表格最右侧新增 Rating 列并带有 Codeforces Analytics 风格的色彩高亮，同时完美兼容个人提交记录背景。
 // @author       GodExious & Antigravity
@@ -159,6 +159,14 @@
         }
         .pcr-app {
             z-index: 9999999 !important;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .pcr-app.visible {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
         }
         /* Widen the Pickr nano theme and adjust interaction layout */
         .pcr-app[data-theme="nano"] {

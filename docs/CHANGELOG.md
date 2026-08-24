@@ -8,6 +8,13 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### v1.5.3
+`2026-08-24 16:15`
+
+- Fix: Fixed a Flash of Unstyled Content (FOUC) issue where the color picker (Pickr) would briefly flash upon page load before its external CSS was fully downloaded.
+
+---
+
 ### v1.5.2
 `2026-08-24 14:15`
 
