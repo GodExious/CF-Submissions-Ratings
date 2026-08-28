@@ -2,7 +2,7 @@
 // @name         CF-Submissions-Ratings
 // @name:zh-CN   Codeforces 提交页/状态页 难度分显示
 // @namespace    https://github.com/GodExious/CF-Submissions-Ratings
-// @version      1.5.3
+// @version      1.5.4
 // @description  Fetches and displays problem difficulty ratings. Adds a new Rating column to status and submissions tables with color-coded backgrounds.
 // @description:zh-CN 自动获取并显示 Codeforces 题目难度分。在 Status 和 Submissions 表格最右侧新增 Rating 列并带有 Codeforces Analytics 风格的色彩高亮，同时完美兼容个人提交记录背景。
 // @author       GodExious & Antigravity
@@ -50,6 +50,7 @@
             standings: true,
             problemTags: true,
             userAvatar: true,
+            formatTeams: true,
             langIcon: true,
             shortVerdict: false
         },
@@ -364,6 +365,149 @@
         }
 
         return {};
+    }
+
+    function formatStandingsCells() {
+        if (!appSettings.show.userAvatar) return;
+        const formatTeams = appSettings.show.formatTeams !== false;
+        const cells = document.querySelectorAll('table.standings .contestant-cell:not(.cf-avatar-processed-cell)');
+        cells.forEach(cell => {
+            cell.classList.add('cf-avatar-processed-cell');
+
+            const ghostImg = cell.querySelector('img[src*="ghost.png"]');
+            if (ghostImg) {
+                if (!formatTeams) {
+                    cell.style.setProperty('white-space', 'normal', 'important');
+                    cell.style.setProperty('word-break', 'break-word', 'important');
+                    return;
+                }
+                const span = cell.querySelector('span[title="Ghost participant"]');
+                if (span) {
+                    cell.classList.add('cf-team-formatted');
+                    const text = span.textContent;
+                    const parts = text.split(' - ');
+                    let school = '', team = '', members = '';
+                    if (parts.length >= 3) {
+                        school = parts[0];
+                        team = parts[1];
+                        members = parts.slice(2).join(' - ');
+                    } else if (parts.length === 2) {
+                        team = parts[0];
+                        members = parts[1];
+                    } else {
+                        members = text;
+                    }
+
+                    cell.innerHTML = '';
+                    cell.style.setProperty('vertical-align', 'middle', 'important');
+                    cell.style.setProperty('padding-top', '8px', 'important');
+                    cell.style.setProperty('padding-bottom', '8px', 'important');
+
+                    const size = appSettings.avatarSize || 1.4;
+                    ghostImg.style.cssText = `width: ${size}em; height: ${size}em; vertical-align: middle; margin-right: 4px; display: inline-block; object-fit: cover;`;
+
+                    const teamHeader = document.createElement('div');
+                    teamHeader.style.cssText = 'margin-bottom: 6px; line-height: 1.4;';
+
+                    if (school) {
+                        const schoolLine = document.createElement('div');
+                        schoolLine.style.cssText = 'word-break: break-word; margin-bottom: 2px; display: inline-block;';
+                        schoolLine.appendChild(ghostImg);
+                        const schoolSpan = document.createElement('span');
+                        schoolSpan.style.cssText = 'font-weight: bold; color: #777; margin-left: 4px; vertical-align: middle;';
+                        schoolSpan.textContent = school;
+                        schoolLine.appendChild(schoolSpan);
+                        teamHeader.appendChild(schoolLine);
+                    } else {
+                        const ghostLine = document.createElement('div');
+                        ghostLine.style.cssText = 'word-break: break-word; margin-bottom: 2px; display: inline-block;';
+                        ghostLine.appendChild(ghostImg);
+                        teamHeader.appendChild(ghostLine);
+                    }
+
+                    if (team) {
+                        const teamLine = document.createElement('div');
+                        teamLine.style.cssText = 'word-break: break-word; font-weight: bold; margin-bottom: 8px; margin-left: 2px; font-size: 13px;';
+                        teamLine.textContent = team;
+                        teamHeader.appendChild(teamLine);
+                    }
+
+                    cell.appendChild(teamHeader);
+
+                    if (members) {
+                        const memberNames = members.split(',').map(m => m.trim());
+                        const membersContainer = document.createElement('div');
+                        membersContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px; margin-left: 4px;';
+                        memberNames.forEach(name => {
+                            const memberLine = document.createElement('div');
+                            memberLine.style.cssText = 'white-space: nowrap; color: #888; font-size: 11px; display: flex; align-items: center;';
+                            memberLine.textContent = name;
+                            membersContainer.appendChild(memberLine);
+                        });
+                        cell.appendChild(membersContainer);
+                    }
+                }
+                return;
+            }
+
+            const userLinks = Array.from(cell.querySelectorAll('a[href*="/profile/"]'));
+            if (userLinks.length > 1 || cell.querySelector('a[href*="/team/"]')) {
+                if (!formatTeams) {
+                    cell.style.setProperty('white-space', 'normal', 'important');
+                    cell.style.setProperty('word-break', 'break-word', 'important');
+                    cell.classList.add('cf-team-formatted');
+                    return;
+                }
+                cell.classList.add('cf-team-formatted');
+                cell.style.setProperty('vertical-align', 'middle', 'important');
+                cell.style.setProperty('padding-top', '8px', 'important');
+                cell.style.setProperty('padding-bottom', '8px', 'important');
+
+                const membersContainer = document.createElement('div');
+                membersContainer.style.cssText = 'display: flex; flex-direction: column; gap: 4px; margin-left: 4px;';
+
+                userLinks.forEach(link => {
+                    const memberLine = document.createElement('div');
+                    memberLine.style.cssText = 'white-space: nowrap; display: flex; align-items: center; font-size: 11px;';
+                    memberLine.appendChild(link);
+                    membersContainer.appendChild(memberLine);
+                });
+
+                const removeCommas = (parentNode) => {
+                    Array.from(parentNode.childNodes).forEach(child => {
+                        if (child.nodeType === Node.TEXT_NODE) {
+                            child.textContent = child.textContent.replace(/^[\s,]+|[\s,]+$/g, '');
+                        } else if (child.nodeType === Node.ELEMENT_NODE) {
+                            removeCommas(child);
+                        }
+                    });
+                };
+                removeCommas(cell);
+
+                const teamHeader = document.createElement('div');
+                teamHeader.style.cssText = 'word-break: break-word; margin-bottom: 8px; font-size: 13px; font-weight: bold; line-height: 1.4;';
+
+                while (cell.firstChild) {
+                    teamHeader.appendChild(cell.firstChild);
+                }
+
+                const flag = teamHeader.querySelector('.standings-flag');
+                if (flag) {
+                    flag.style.margin = '0 4px 0 0';
+                    flag.style.verticalAlign = 'middle';
+                }
+
+                Array.from(teamHeader.querySelectorAll('span, a')).forEach(el => {
+                    if (el.style.fontSize) {
+                        el.style.fontSize = '';
+                    }
+                });
+
+                cell.appendChild(teamHeader);
+                cell.appendChild(membersContainer);
+                return;
+            }
+        });
     }
 
     // Apply ratings to tables and standalone links
@@ -878,6 +1022,7 @@
                 }
             }
             if (shouldApply) {
+                formatStandingsCells();
                 applyRatings(ratingsMap);
                 applyUserAvatars();
                 setTimeout(applyTimeFormatting, 500);
@@ -984,33 +1129,44 @@
             img.src = url;
             img.style.cssText = `width: ${size}em; height: ${size}em; border-radius: 50%; vertical-align: middle; margin-right: 4px; border: 1px solid rgba(0,0,0,0.1); display: inline-block; object-fit: cover;`;
 
-            const isTableLayout = td && el.closest('table.status-frame-datatable, div.datatable table, table.standings, table.rtable') && !el.closest('.ttypography');
+            const isTableLayout = td && el.closest('table.status-frame-datatable, div.datatable table, table.rtable, table.standings') && !el.closest('.cf-team-formatted') && !el.closest('.ttypography');
 
             if (isTableLayout) {
                 // Ensure the column containing the user is left-aligned
                 td.style.setProperty('text-align', 'left', 'important');
 
-                // Fetch or create the avatar container at the very beginning of the cell (before Team Name, flags, etc)
-                let avatarContainer = td.querySelector('.cf-avatar-container');
-                if (!avatarContainer) {
+                // Check if this link is already wrapped (happens if multiple users are on the same line)
+                let lineWrapper = el.closest('.cf-avatar-line-wrapper');
+                let avatarContainer;
+
+                if (!lineWrapper) {
+                    // Find the start of the current line (go backwards until <br> or td.firstChild)
+                    let lineStart = el;
+                    while (lineStart.previousSibling && lineStart.previousSibling.tagName !== 'BR' && !(lineStart.previousSibling.classList && lineStart.previousSibling.classList.contains('cf-avatar-line-wrapper'))) {
+                        lineStart = lineStart.previousSibling;
+                    }
+
+                    lineWrapper = document.createElement('span');
+                    lineWrapper.className = 'cf-avatar-line-wrapper';
+                    lineWrapper.style.cssText = 'white-space: nowrap; display: inline-block; max-width: 100%;';
+
                     avatarContainer = document.createElement('span');
                     avatarContainer.className = 'cf-avatar-container';
                     avatarContainer.style.cssText = 'white-space: nowrap; vertical-align: middle; margin-right: 4px; display: inline-block;';
 
-                    const lineWrapper = document.createElement('span');
-                    lineWrapper.className = 'cf-avatar-line-wrapper';
-                    lineWrapper.style.cssText = 'white-space: nowrap; display: inline-block; max-width: 100%;';
-
-                    td.insertBefore(lineWrapper, td.firstChild);
+                    lineStart.parentNode.insertBefore(lineWrapper, lineStart);
                     lineWrapper.appendChild(avatarContainer);
 
+                    // Consume all nodes until the next <br>
                     let current = lineWrapper.nextSibling;
-                    while (current) {
-                        if (current.tagName === 'BR') break;
+                    while (current && current.tagName !== 'BR') {
                         const next = current.nextSibling;
                         lineWrapper.appendChild(current);
                         current = next;
                     }
+                } else {
+                    // If multiple users are on the same line, append to the existing avatar container of that line
+                    avatarContainer = lineWrapper.querySelector('.cf-avatar-container');
                 }
 
                 // Wrap the image in an anchor so it links to the user profile
@@ -1031,6 +1187,7 @@
     // Initialization
     async function init() {
         const ratingsMap = await getRatings();
+        formatStandingsCells();
         applyRatings(ratingsMap);
         applyUserAvatars();
         setTimeout(applyTimeFormatting, 500);
@@ -1057,6 +1214,7 @@
                 locProblemTags: '题目页标签',
                 locUserAvatar: '显示用户头像',
                 locAvatarSize: '头像大小',
+                locFormatTeams: '队伍信息格式化',
                 locLangIcon: '显示语言图标',
                 locLangIconSize: '语言图标大小',
                 locShortVerdict: '显示状态缩写 (AC/WA等)',
@@ -1081,6 +1239,7 @@
                 locProblemTags: 'Problem Tags',
                 locUserAvatar: 'User Avatars',
                 locAvatarSize: 'Avatar Size',
+                locFormatTeams: 'Format Teams',
                 locLangIcon: 'Language Icons',
                 locLangIconSize: 'Icon Size',
                 locShortVerdict: 'Short Verdicts (AC/WA)',
@@ -1356,11 +1515,35 @@
         rowAvatarSize.appendChild(sizeWrapper);
         modal.appendChild(rowAvatarSize);
 
+        // Format Teams Setting
+        const rowFormatTeams = document.createElement('label');
+        rowFormatTeams.style.cssText = `display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: pointer; user-select: none;`;
+        const labelFormatTeams = document.createElement('span');
+        labelFormatTeams.style.cssText = 'font-size: 13px; color: #555;';
+        const toggleContainerFormatTeams = document.createElement('div');
+        toggleContainerFormatTeams.className = 'cf-toggle-switch';
+        const cbFormatTeams = document.createElement('input');
+        cbFormatTeams.type = 'checkbox';
+        cbFormatTeams.checked = appSettings.show.formatTeams !== false;
+        const sliderFormatTeams = document.createElement('span');
+        sliderFormatTeams.className = 'cf-toggle-slider';
+        toggleContainerFormatTeams.appendChild(cbFormatTeams);
+        toggleContainerFormatTeams.appendChild(sliderFormatTeams);
+        rowFormatTeams.appendChild(labelFormatTeams);
+        rowFormatTeams.appendChild(toggleContainerFormatTeams);
+        modal.appendChild(rowFormatTeams);
+
+        cbFormatTeams.onchange = () => {
+            checkIfChanged();
+        };
+
         cbAvatar.onchange = () => {
             rowAvatarSize.style.display = cbAvatar.checked ? 'flex' : 'none';
+            rowFormatTeams.style.display = cbAvatar.checked ? 'flex' : 'none';
             checkIfChanged();
         };
         rowAvatarSize.style.display = cbAvatar.checked ? 'flex' : 'none';
+        rowFormatTeams.style.display = cbAvatar.checked ? 'flex' : 'none';
 
         // Lang Icon Setting
         const rowLangIcon = document.createElement('label');
@@ -1568,6 +1751,7 @@
             if (timeToggle.checked !== appSettings.timeFormat.enabled) changed = true;
             if ((timeInput.value || 'YYYY/MM/DD HH:mm') !== appSettings.timeFormat.format) changed = true;
             if (cbAvatar.checked !== appSettings.show.userAvatar) changed = true;
+            if (cbFormatTeams.checked !== (appSettings.show.formatTeams !== false)) changed = true;
             if (cbLangIcon.checked !== (appSettings.show.langIcon !== false)) changed = true;
             if (cbShortVerdict.checked !== !!appSettings.show.shortVerdict) changed = true;
             if (parseFloat(langIconSizeInput.value) !== (appSettings.langIconSize || 1.0)) changed = true;
@@ -1603,6 +1787,7 @@
             label1.textContent = t().acColor;
             labelAvatar.textContent = t().locUserAvatar;
             labelAvatarSize.textContent = t().locAvatarSize;
+            labelFormatTeams.textContent = t().locFormatTeams;
             labelLangIcon.textContent = t().locLangIcon;
             labelLangIconSize.textContent = t().locLangIconSize;
             labelShortVerdict.textContent = t().locShortVerdict;
@@ -1627,6 +1812,7 @@
                 appSettings.show = { ...DEFAULT_SETTINGS.show };
             }
             appSettings.show.userAvatar = cbAvatar.checked;
+            appSettings.show.formatTeams = cbFormatTeams.checked;
             appSettings.show.langIcon = cbLangIcon.checked;
             appSettings.show.shortVerdict = cbShortVerdict.checked;
             appSettings.avatarSize = parseFloat(avatarSizeInput.value);

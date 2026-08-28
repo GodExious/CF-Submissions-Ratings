@@ -8,6 +8,14 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### v1.5.4
+`2026-08-28 18:45`
+
+- Optimization: Resolved the issue on the Standings page where long team names were truncated/obscured when avatars were enabled. Added a new "Format Teams" feature toggle in the settings for both Ghost Participants and standard CF teams.
+- Optimization: Fixed the display of writers' avatars on the Contest page when avatars were enabled, restoring a clean, line-by-line layout.
+
+---
+
 ### v1.5.3
 `2026-08-24 16:15`
 
@@ -77,3 +85,5 @@ All notable changes to this project will be documented in this file.
 
 - Displays problem difficulty ratings directly on `submissions` and `status` pages, complete with corresponding color highlighting.
 - Fetches problem data via the official Codeforces API and updates locally only once per day, avoiding excessive network requests.
+
+
