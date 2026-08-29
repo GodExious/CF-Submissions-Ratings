@@ -2,7 +2,7 @@
 // @name         CF-Submissions-Ratings
 // @name:zh-CN   Codeforces 提交页/状态页 难度分显示
 // @namespace    https://github.com/GodExious/CF-Submissions-Ratings
-// @version      1.5.4
+// @version      1.5.5
 // @description  Fetches and displays problem difficulty ratings. Adds a new Rating column to status and submissions tables with color-coded backgrounds.
 // @description:zh-CN 自动获取并显示 Codeforces 题目难度分。在 Status 和 Submissions 表格最右侧新增 Rating 列并带有 Codeforces Analytics 风格的色彩高亮，同时完美兼容个人提交记录背景。
 // @author       GodExious & Antigravity
@@ -12,7 +12,7 @@
 // @icon         https://codeforces.com/favicon.ico
 // @updateURL    https://raw.githubusercontent.com/GodExious/CF-Submissions-Ratings/main/cf-submission-ratings.user.js
 // @downloadURL  https://raw.githubusercontent.com/GodExious/CF-Submissions-Ratings/main/cf-submission-ratings.user.js
-// @run-at       document-end
+// @run-at       document-start
 // @require      https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/pickr.min.js
 // @license      MIT
 // @grant        none
@@ -152,11 +152,92 @@
             .replace(/ss/g, ss);
     }
 
-    // Inject Global Custom CSS for AC Background
+    function safeAppendStyle(el) {
+        if (document.head) document.head.appendChild(el);
+        else document.documentElement.appendChild(el);
+    }
+
+    // Inject dynamic style for real-time updates
+    const dynamicStyle = document.createElement('style');
+    dynamicStyle.id = 'cf-dynamic-style';
+    safeAppendStyle(dynamicStyle);
+
+    function updateDynamicStyle() {
+        dynamicStyle.innerHTML = `
+            :root {
+                --cf-avatar-size: ${appSettings.avatarSize || 1.4}em;
+                --cf-lang-icon-size: ${(appSettings.langIconSize || 1.0) * 14}px;
+            }
+            html:root body table.problems tr.accepted-problem td.act,
+            html:root body table.problems tr.accepted-problem td.id,
+            html:root body table.problems tr.accepted-problem td,
+            html:root body .problems .accepted-problem td.act,
+            html:root body tr.accepted-problem td {
+                background-color: ${appSettings.acBgColor} !important;
+            }
+            html:root body table.problems tr.accepted-problem td.id,
+            html:root body .problems .accepted-problem td.id {
+                border-left-color: ${appSettings.acBgColor} !important;
+            }
+            :root.cf-hide-submissions .cf-table-submissions .cf-rating-col,
+            :root.cf-hide-status .cf-table-status .cf-rating-col,
+            :root.cf-hide-hacks .cf-table-hacks .cf-rating-col,
+            :root.cf-hide-problemset .cf-table-problemset .cf-rating-col,
+            :root.cf-hide-contestProblems .cf-table-contestProblems .cf-rating-col,
+            :root.cf-hide-standings .cf-rating-standings-row {
+                display: none !important;
+            }
+            :root.cf-hide-timeFormat .cf-time-timezone-label {
+                display: none !important;
+            }
+            :root:not(.cf-hide-problemset) .cf-table-problemset tr.accepted-problem td.id,
+            :root:not(.cf-hide-problemset) .cf-table-problemset tr.rejected-problem td.id,
+            :root:not(.cf-hide-contestProblems) .cf-table-contestProblems tr.accepted-problem td.id,
+            :root:not(.cf-hide-contestProblems) .cf-table-contestProblems tr.rejected-problem td.id {
+                border-left: 1px solid #e1e1e1 !important;
+            }
+            :root.cf-hide-userAvatar .cf-avatar-container,
+            :root.cf-hide-userAvatar .cf-user-avatar {
+                display: none !important;
+            }
+            :root.cf-hide-langIcon .cf-lang-icon {
+                display: none !important;
+            }
+        `;
+        const classMap = {
+            'cf-hide-submissions': !appSettings.show.submissions,
+            'cf-hide-status': !appSettings.show.status,
+            'cf-hide-hacks': !appSettings.show.hacks,
+            'cf-hide-problemset': !appSettings.show.problemset,
+            'cf-hide-contestProblems': !appSettings.show.contestProblems,
+            'cf-hide-standings': !appSettings.show.standings,
+            'cf-hide-userAvatar': !appSettings.show.userAvatar,
+            'cf-hide-langIcon': !appSettings.show.langIcon,
+            'cf-hide-timeFormat': !appSettings.timeFormat.enabled
+        };
+        for (const [cls, add] of Object.entries(classMap)) {
+            document.documentElement.classList.toggle(cls, add);
+        }
+    }
+    updateDynamicStyle();
+
+    // Inject Global Custom CSS
     const customStyle = document.createElement('style');
     customStyle.innerHTML = `
-        tr.accepted-problem td {
-            background-color: ${appSettings.acBgColor} !important;
+        .cf-version-tag {
+            background-color: #e6f7ff;
+            color: #1890ff;
+            border: 1px solid #91d5ff;
+            font-size: 14px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 8px;
+            margin-left: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 0.5px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
         .pcr-app {
             z-index: 9999999 !important;
@@ -224,19 +305,19 @@
             transform: translateX(16px);
         }
     `;
-    document.head.appendChild(customStyle);
+    safeAppendStyle(customStyle);
 
     // Inject Pickr CSS
     const pickrCss = document.createElement('link');
     pickrCss.rel = 'stylesheet';
     pickrCss.href = 'https://cdn.jsdelivr.net/npm/@simonwep/pickr/dist/themes/nano.min.css';
-    document.head.appendChild(pickrCss);
+    safeAppendStyle(pickrCss);
 
     // Auto dark theme detection
     const isDarkTheme = () => {
         // Dark Reader will handle inverting our light colors automatically as long as we don't use !important
         if (document.querySelector('.darkreader') || document.querySelector('meta[name="darkreader"]')) return false;
-        if (document.documentElement.getAttribute('data-theme') === 'dark' || document.body.classList.contains('dark')) return true;
+        if (document.documentElement.getAttribute('data-theme') === 'dark' || (document.body && document.body.classList.contains('dark'))) return true;
         try {
             const bodyBg = window.getComputedStyle(document.body).backgroundColor;
             const match = bodyBg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
@@ -374,9 +455,14 @@
         cells.forEach(cell => {
             cell.classList.add('cf-avatar-processed-cell');
 
+            if (!cell.hasAttribute('data-original-html')) {
+                cell.setAttribute('data-original-html', cell.innerHTML);
+            }
+
             const ghostImg = cell.querySelector('img[src*="ghost.png"]');
             if (ghostImg) {
                 if (!formatTeams) {
+                    cell.innerHTML = cell.getAttribute('data-original-html');
                     cell.style.setProperty('white-space', 'normal', 'important');
                     cell.style.setProperty('word-break', 'break-word', 'important');
                     return;
@@ -453,9 +539,10 @@
             const userLinks = Array.from(cell.querySelectorAll('a[href*="/profile/"]'));
             if (userLinks.length > 1 || cell.querySelector('a[href*="/team/"]')) {
                 if (!formatTeams) {
+                    cell.innerHTML = cell.getAttribute('data-original-html');
                     cell.style.setProperty('white-space', 'normal', 'important');
                     cell.style.setProperty('word-break', 'break-word', 'important');
-                    cell.classList.add('cf-team-formatted');
+                    cell.classList.remove('cf-team-formatted');
                     return;
                 }
                 cell.classList.add('cf-team-formatted');
@@ -510,38 +597,70 @@
         });
     }
 
+    function applyRatingStyle(cell, rating) {
+        cell.dataset.rating = rating;
+        cell.style.textAlign = 'center';
+        cell.style.verticalAlign = 'middle';
+
+        if (appSettings.displayStyle === 'tag') {
+            cell.textContent = '';
+            cell.style.setProperty('background-color', 'transparent', 'important');
+            const tagStyle = getRatingTagStyle(rating);
+            const tagSpan = document.createElement('span');
+            tagSpan.textContent = rating;
+            tagSpan.style.cssText = `
+                display: inline-block !important;
+                padding: 1px 6px !important;
+                border-radius: 4px !important;
+                border: 1px solid ${tagStyle.border} !important;
+                background-color: ${tagStyle.bg} !important;
+                color: ${tagStyle.text} !important;
+                font-size: 12px !important;
+                font-weight: 500 !important;
+            `;
+            cell.appendChild(tagSpan);
+        } else {
+            cell.textContent = rating;
+            cell.style.setProperty('background-color', getRatingBgColor(rating), 'important');
+            cell.style.setProperty('color', isDarkTheme() ? '#EEEEEE' : (rating >= 1600 ? 'white' : 'black'), 'important');
+            cell.style.setProperty('font-weight', 'normal', 'important');
+        }
+    }
+
+    function applyProblemTagStyle(box, tag, rating) {
+        if (!appSettings.show.problemTags) {
+            if (box && box.hasAttribute('data-original-css')) box.style.cssText = box.dataset.originalCss;
+            if (tag.hasAttribute('data-original-css')) tag.style.cssText = tag.dataset.originalCss;
+            return;
+        }
+
+        if (box && box.hasAttribute('data-original-css')) box.style.cssText = box.dataset.originalCss;
+        if (tag.hasAttribute('data-original-css')) tag.style.cssText = tag.dataset.originalCss;
+
+        tag.style.setProperty('background-color', 'transparent', 'important');
+        if (appSettings.displayStyle === 'tag') {
+            const tagStyle = getRatingTagStyle(rating);
+            if (box) {
+                box.style.setProperty('background-color', tagStyle.bg, 'important');
+                box.style.setProperty('border-color', tagStyle.border, 'important');
+                box.style.setProperty('color', tagStyle.text, 'important');
+            }
+            tag.style.setProperty('color', tagStyle.text, 'important');
+        } else {
+            const isWhite = rating >= 1600;
+            if (box) {
+                box.style.setProperty('background-color', getRatingBgColor(rating), 'important');
+                box.style.setProperty('border-color', getRatingBorderColor(rating), 'important');
+                if (isWhite) box.style.setProperty('color', 'white', 'important');
+                else box.style.removeProperty('color');
+            }
+            tag.style.setProperty('color', isWhite ? 'white' : '#000', 'important');
+        }
+    }
+
     // Apply ratings to tables and standalone links
     function applyRatings(ratingsMap) {
         if (!ratingsMap || Object.keys(ratingsMap).length === 0) return;
-
-        function applyRatingStyle(cell, rating) {
-            cell.style.textAlign = 'center';
-            cell.style.verticalAlign = 'middle';
-
-            if (appSettings.displayStyle === 'tag') {
-                cell.textContent = '';
-                cell.style.setProperty('background-color', 'transparent', 'important');
-                const tagStyle = getRatingTagStyle(rating);
-                const tagSpan = document.createElement('span');
-                tagSpan.textContent = rating;
-                tagSpan.style.cssText = `
-                    display: inline-block !important;
-                    padding: 1px 6px !important;
-                    border-radius: 4px !important;
-                    border: 1px solid ${tagStyle.border} !important;
-                    background-color: ${tagStyle.bg} !important;
-                    color: ${tagStyle.text} !important;
-                    font-size: 12px !important;
-                    font-weight: 500 !important;
-                `;
-                cell.appendChild(tagSpan);
-            } else {
-                cell.textContent = rating;
-                cell.style.setProperty('background-color', getRatingBgColor(rating), 'important');
-                cell.style.setProperty('color', isDarkTheme() ? '#EEEEEE' : (rating >= 1600 ? 'white' : 'black'), 'important');
-                cell.style.setProperty('font-weight', 'normal', 'important');
-            }
-        }
 
         const regexes = [
             /\/contest\/(\d+)\/problem\/([A-Za-z0-9_]+)/i,
@@ -588,7 +707,10 @@
 
                 if (matched) {
                     const span = document.createElement('span');
-                    span.innerHTML = htmlStr;
+                    span.className = 'cf-verdict-text';
+                    span.dataset.original = txt;
+                    span.dataset.short = htmlStr;
+                    span.innerHTML = appSettings.show.shortVerdict ? htmlStr : txt;
                     node.parentNode.replaceChild(span, node);
                 }
             } else {
@@ -612,6 +734,13 @@
             let isHacks = window.location.href.includes('/hacks');
             let isStatusOrHacks = false;
 
+            const path = window.location.pathname.toLowerCase();
+            const isSubmissionsPage = path.includes('/my') || path.includes('/submissions');
+
+            if (isHacks) table.classList.add('cf-table-hacks');
+            else if (isSubmissionsPage) table.classList.add('cf-table-submissions');
+            else table.classList.add('cf-table-status');
+
             Array.from(headerRow.cells).forEach((th, idx) => {
                 const text = th.textContent.toLowerCase();
                 if (timeColIdx === -1 && (text.includes('when') || text.includes('time') || text.includes('时间') || text.includes('когда') || text.includes('date'))) {
@@ -634,9 +763,6 @@
 
             if (!isStatusOrHacks) return; // Skip if it's not a status or hacks table (e.g., contest list)
 
-            const path = window.location.pathname.toLowerCase();
-            const isSubmissionsPage = path.includes('/my') || path.includes('/submissions');
-
             let shouldShowRating = false;
             if (isHacks) {
                 shouldShowRating = appSettings.show.hacks;
@@ -654,7 +780,7 @@
                 headerRow.setAttribute('data-cf-rating-processed', 'true');
 
                 // Append timezone to Time column header
-                if (timeColIdx !== -1 && appSettings.timeFormat && appSettings.timeFormat.enabled) {
+                if (timeColIdx !== -1) {
                     const th = headerRow.cells[timeColIdx];
                     let tzStr = 'UTC+3'; // Codeforces default server time (MSK)
 
@@ -665,7 +791,7 @@
                             tzStr = tzMatch[0].toUpperCase();
                         }
                     }
-                    th.innerHTML = `${th.innerHTML}<br><span style="font-size: 0.85em; opacity: 0.8;">(${tzStr})</span>`;
+                    th.innerHTML = `${th.innerHTML}<br><span class="cf-time-timezone-label" style="font-size: 0.85em; opacity: 0.8;">(${tzStr})</span>`;
                     if (!isSubmissionsPage) {
                         th.style.setProperty('white-space', 'nowrap', 'important');
                     }
@@ -687,7 +813,7 @@
 
                     // Create new Rating header
                     const th = document.createElement('th');
-                    th.className = 'top right';
+                    th.className = 'top right cf-rating-col';
                     th.style.textAlign = 'center';
                     th.style.width = '60px';
                     th.innerHTML = 'Rating';
@@ -701,15 +827,11 @@
                 // Time Formatting
                 if (timeColIdx !== -1) {
                     const timeCell = row.cells[timeColIdx];
-                    if (timeCell && appSettings.timeFormat && appSettings.timeFormat.enabled) {
-                        const text = timeCell.textContent.trim();
-                        // Prevent re-formatting if it already has our format (starts with YYYY/MM/DD or YYYY-MM-DD)
-                        if (!/^\d{4}[-\/]\d{2}[-\/]\d{2}/.test(text) && text.length >= 8 && /\d/.test(text)) {
-                            const newTime = formatTimeStr(text);
-                            if (newTime) {
-                                timeCell.innerHTML = newTime;
-                            }
-                        }
+                    if (timeCell && !timeCell.hasAttribute('data-cf-time-processed')) {
+                        timeCell.setAttribute('data-cf-time-processed', 'true');
+                        timeCell.classList.add('cf-table-time-cell');
+                        timeCell.setAttribute('data-original-time', timeCell.innerHTML);
+
                         if (!isSubmissionsPage) {
                             timeCell.style.setProperty('white-space', 'nowrap', 'important');
                         }
@@ -738,11 +860,12 @@
                                     customSrc = 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTI4IDEyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBmaWxsPSIjYjAxYzJlIiBkPSJNMTE4Ljc2NiA5NS44MmMuODktMS41NDMgMS40NDEtMy4yOCAxLjQ0MS00Ljg0M1YzNi43OGMwLTEuNTU4LS41NS0zLjI5Ny0xLjQ0MS00Ljg0bC01NS4zMiAzMS45NFptMCAwIi8+PHBhdGggZmlsbD0iIzhhMTIyMSIgZD0ibTY4LjM2IDEyNi41ODYgNDYuOTMzLTI3LjA5NGMxLjM1Mi0uNzgxIDIuNTgyLTIuMTI5IDMuNDczLTMuNjcybC01NS4zMi0zMS45NEw4LjEyIDk1LjgyYy44OSAxLjU0MyAyLjEyMSAyLjg5IDMuNDczIDMuNjcybDQ2LjkzMyAyNy4wOTRjMi43MDMgMS41NjIgNy4xMyAxLjU2MiA5LjgzMiAwWm0wIDAiLz48cGF0aCBmaWxsPSIjZDkzODRkIiBkPSJNMTE4Ljc2NiAzMS45NDFjLS44OTEtMS41NDYtMi4xMjEtMi44OTQtMy40NzMtMy42NzFMNjguMzU5IDEuMTcyYy0yLjcwMy0xLjU2My03LjEyOS0xLjU2My05LjgzMiAwTDExLjU5NCAyOC4yN0M4Ljg5IDI5LjgyOCA2LjY4IDMzLjY2IDYuNjggMzYuNzh2NTQuMTk2YzAgMS41NjIuNTUgMy4zIDEuNDQxIDQuODQzTDYzLjQ0NSA2My44OFptMCAwIi8+PHBhdGggZmlsbD0iI2ZmZiIgZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNMzUgMjYuMyB2NzUuNCBoMjAgYSAzNy43IDM3LjcgMCAwIDAgMCAtNzUuNCB6IE01MCA0MS4zIGg1IGEgMjIuNyAyMi43IDAgMCAxIDAgNDUuNCBoLTUgeiIvPjwvc3ZnPg==';
                                 }
                                 img.src = customSrc || `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/${iconName}/${svgName}`;
-                                img.style.cssText = `width: ${sizePx}px; height: ${sizePx}px; vertical-align: middle; margin-right: 5px;`;
+                                img.className = 'cf-lang-icon';
+                                img.style.cssText = `width: var(--cf-lang-icon-size); height: var(--cf-lang-icon-size); vertical-align: middle; margin-right: 5px;`;
 
                                 const textSpan = document.createElement('span');
+                                textSpan.className = 'cf-lang-text';
                                 textSpan.textContent = langText;
-                                textSpan.style.cssText = 'display: inline-block; max-width: 110px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;';
 
                                 langCell.innerHTML = '';
                                 langCell.appendChild(img);
@@ -751,13 +874,15 @@
 
                                 langCell.style.setProperty('white-space', 'nowrap', 'important');
                                 langCell.style.setProperty('max-width', '140px', 'important');
+                                langCell.style.setProperty('overflow', 'hidden', 'important');
+                                langCell.style.setProperty('text-overflow', 'ellipsis', 'important');
                             }
                         }
                     }
                 }
 
                 // Verdict Abbreviation
-                if (verdictColIdx !== -1 && appSettings.show && appSettings.show.shortVerdict) {
+                if (verdictColIdx !== -1) {
                     const verdictCell = row.cells[verdictColIdx];
                     if (verdictCell && !verdictCell.hasAttribute('data-cf-verdict-processed')) {
                         verdictCell.setAttribute('data-cf-verdict-processed', 'true');
@@ -797,7 +922,7 @@
 
                 // Create new Rating cell
                 const td = document.createElement('td');
-                td.className = 'right';
+                td.className = 'right cf-rating-col';
                 td.style.textAlign = 'center';
                 td.style.verticalAlign = 'middle';
 
@@ -858,12 +983,15 @@
             const isProblemset = window.location.pathname.toLowerCase().includes('/problemset');
             const shouldShowRating = isProblemset ? appSettings.show.problemset : appSettings.show.contestProblems;
 
+            if (isProblemset) table.classList.add('cf-table-problemset');
+            else table.classList.add('cf-table-contestProblems');
+
             table.setAttribute('data-cf-rating-problems-processed', 'true');
 
             const headerRow = table.querySelector('tr');
-            if (headerRow && shouldShowRating) {
+            if (headerRow) {
                 const th = document.createElement('th');
-                th.className = 'top left';
+                th.className = 'top left cf-rating-col';
                 th.style.width = '4em';
                 th.style.textAlign = 'center';
                 th.innerHTML = 'Rating';
@@ -880,91 +1008,66 @@
             dataRows.forEach(row => {
                 if (row.cells.length < 2) return;
 
-                let td = null;
                 const idCell = row.querySelector('td.id');
 
-                if (shouldShowRating) {
-                    td = document.createElement('td');
-                    td.className = 'left';
-                    td.style.textAlign = 'center';
-                    td.style.verticalAlign = 'middle';
+                const td = document.createElement('td');
+                td.className = 'left cf-rating-col';
+                td.style.textAlign = 'center';
+                td.style.verticalAlign = 'middle';
 
-                    const prevTd = row.firstElementChild;
-                    if (prevTd && prevTd.classList.contains('left')) {
-                        prevTd.classList.remove('left');
-                    }
-
-                    const link = idCell ? idCell.querySelector('a') : row.querySelector('a[href*="/problem/"]');
-
-                    if (link) {
-                        const info = getProblemRatingFromHref(link.href);
-                        if (info && info.rating) {
-                            applyRatingStyle(td, info.rating);
-                        }
-
-                        const rowLinks = row.querySelectorAll('a[href*="/problem/"]');
-                        rowLinks.forEach(l => l.setAttribute('data-cf-rating-added', 'true'));
-                    }
-
-                    row.insertBefore(td, row.firstElementChild);
+                const prevTd = row.firstElementChild;
+                if (prevTd && prevTd.classList.contains('left')) {
+                    prevTd.classList.remove('left');
                 }
 
+                const link = idCell ? idCell.querySelector('a') : row.querySelector('a[href*="/problem/"]');
+
+                if (link) {
+                    const info = getProblemRatingFromHref(link.href);
+                    if (info && info.rating) {
+                        applyRatingStyle(td, info.rating);
+                    }
+
+                    const rowLinks = row.querySelectorAll('a[href*="/problem/"]');
+                    rowLinks.forEach(l => l.setAttribute('data-cf-rating-added', 'true'));
+                }
+
+                row.insertBefore(td, row.firstElementChild);
+
                 // Fix the CF accepted/rejected status styling
-                if (row.classList.contains('accepted-problem')) {
-                    if (shouldShowRating && idCell) {
-                        idCell.style.setProperty('border-left', '1px solid #e1e1e1', 'important');
-                    }
-
+                if (row.classList.contains('accepted-problem') || row.classList.contains('rejected-problem')) {
                     Array.from(row.cells).forEach(cell => {
-                        if (shouldShowRating && cell === td) return;
-                        cell.style.setProperty('background-color', appSettings.acBgColor, 'important');
-                    });
-                } else if (row.classList.contains('rejected-problem')) {
-                    if (shouldShowRating && idCell) {
-                        idCell.style.setProperty('border-left', '1px solid #e1e1e1', 'important');
-                    }
-
-                    Array.from(row.cells).forEach(cell => {
-                        if (shouldShowRating && cell === td) return;
-                        cell.style.setProperty('background-color', '#ffe3e3', 'important');
+                        if (cell === td) return;
+                        if (row.classList.contains('rejected-problem')) {
+                            cell.style.setProperty('background-color', '#ffdddd', 'important');
+                        }
                     });
                 }
             });
         });
 
-
         // 3. Handle actual Problem Page tags (sidebar tags)
         const tagBoxes = document.querySelectorAll('span.tag-box:not([data-cf-rating-added])');
         tagBoxes.forEach(tag => {
-            if (!appSettings.show.problemTags) return;
             const text = tag.textContent.trim();
             if (text.startsWith('*')) {
                 const ratingMatch = text.match(/^\*\s*(\d+)$/);
                 if (ratingMatch && ratingMatch[1]) {
                     const rating = parseInt(ratingMatch[1], 10);
                     tag.setAttribute('data-cf-rating-added', 'true');
-
-                    const parentBox = tag.closest('.roundbox');
-                    if (appSettings.displayStyle === 'tag') {
-                        const tagStyle = getRatingTagStyle(rating);
-                        if (parentBox) {
-                            parentBox.style.setProperty('background-color', tagStyle.bg, 'important');
-                            parentBox.style.setProperty('border-color', tagStyle.border, 'important');
-                            parentBox.style.setProperty('color', tagStyle.text, 'important');
-                        }
-                        tag.style.setProperty('color', tagStyle.text, 'important');
-                    } else {
-                        if (parentBox) {
-                            parentBox.style.setProperty('background-color', getRatingBgColor(rating), 'important');
-                            parentBox.style.setProperty('border-color', getRatingBorderColor(rating), 'important');
-                            if (rating >= 1600) {
-                                parentBox.style.setProperty('color', 'white', 'important');
-                            }
-                        }
-                        tag.style.setProperty('color', rating >= 1600 ? 'white' : '#000', 'important');
+                    tag.dataset.rating = rating;
+                    if (!tag.hasAttribute('data-original-css')) {
+                        tag.dataset.originalCss = tag.style.cssText;
                     }
-
-                    tag.style.setProperty('background-color', 'transparent', 'important');
+                    const parentBox = tag.closest('.roundbox');
+                    if (parentBox) {
+                        parentBox.setAttribute('data-cf-rating-added', 'true');
+                        parentBox.dataset.rating = rating;
+                        if (!parentBox.hasAttribute('data-original-css')) {
+                            parentBox.dataset.originalCss = parentBox.style.cssText;
+                        }
+                    }
+                    applyProblemTagStyle(parentBox, tag, rating);
                 }
             }
         });
@@ -985,9 +1088,27 @@
 
         let d = new Date(cleanText);
         if (isNaN(d.getTime())) {
+            // Try parsing Codeforces format: MMM/DD/YYYY HH:MM
+            const cfMatch = cleanText.match(/([A-Za-z]{3})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(:(\d{2}))?/);
+            if (cfMatch) {
+                const months = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+                const m = months[cfMatch[1].toLowerCase()];
+                if (m) {
+                    const hh = cfMatch[4].padStart(2, '0');
+                    const mm = cfMatch[5].padStart(2, '0');
+                    const ss = (cfMatch[7] || '00').padStart(2, '0');
+                    d = new Date(`${cfMatch[3]}-${String(m).padStart(2, '0')}-${String(cfMatch[2]).padStart(2, '0')}T${hh}:${mm}:${ss}`);
+                }
+            }
+
             // Try parsing Russian format: DD.MM.YYYY HH:MM:SS
-            const ruMatch = cleanText.match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}:\d{2}(:\d{2})?)/);
-            if (ruMatch) d = new Date(`${ruMatch[2]}/${ruMatch[1]}/${ruMatch[3]} ${ruMatch[4]}`);
+            const ruMatch = cleanText.match(/(\d{2})\.(\d{2})\.(\d{4})\s+(\d{1,2}):(\d{2})(:(\d{2}))?/);
+            if (ruMatch) {
+                const hh = ruMatch[4].padStart(2, '0');
+                const mm = ruMatch[5].padStart(2, '0');
+                const ss = (ruMatch[7] || '00').padStart(2, '0');
+                d = new Date(`${ruMatch[3]}-${ruMatch[2]}-${ruMatch[1]}T${hh}:${mm}:${ss}`);
+            }
         }
 
         if (!isNaN(d.getTime())) {
@@ -996,17 +1117,63 @@
         return null;
     }
 
+    function wrapVirtualParticipationTime() {
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+        const nodes = [];
+        const dateRegex = /([A-Za-z]{3}\/\d{1,2}\/\d{4}\s+\d{1,2}:\d{2}(?::\d{2})?|\d{2}\.\d{2}\.\d{4}\s+\d{1,2}:\d{2}(?::\d{2})?)/i;
+        while (walker.nextNode()) {
+            if (walker.currentNode.parentElement && walker.currentNode.parentElement.closest('.format-time, .format-date, .cf-formatted-time, .cf-table-time-cell')) {
+                continue; // Skip already formatted text
+            }
+            if (dateRegex.test(walker.currentNode.nodeValue)) {
+                nodes.push(walker.currentNode);
+            }
+        }
+        nodes.forEach(node => {
+            const match = node.nodeValue.match(dateRegex);
+            if (match) {
+                const timeStr = match[1];
+                const timeIndex = node.nodeValue.indexOf(timeStr);
+                const afterTime = node.nodeValue.substring(timeIndex + timeStr.length);
+
+                node.nodeValue = node.nodeValue.substring(0, timeIndex);
+
+                const span = document.createElement('span');
+                span.className = 'cf-formatted-time';
+                span.textContent = timeStr;
+
+                const afterNode = document.createTextNode(afterTime);
+
+                node.parentNode.insertBefore(span, node.nextSibling);
+                node.parentNode.insertBefore(afterNode, span.nextSibling);
+            }
+        });
+    }
+
     function applyTimeFormatting() {
-        const timeSpans = document.querySelectorAll('.format-time:not([data-custom-formatted]), .format-date:not([data-custom-formatted])');
+        const timeSpans = document.querySelectorAll('.format-time, .format-date, .cf-formatted-time, .cf-table-time-cell');
         timeSpans.forEach(span => {
-            const text = span.textContent.trim();
-            if (text.length < 8) return;
-            const newTime = formatTimeStr(text);
-            if (newTime) {
-                span.innerHTML = newTime;
-                span.setAttribute('data-custom-formatted', 'true');
-                span.classList.remove('format-time');
-                span.classList.remove('format-date');
+            span.classList.add('cf-formatted-time');
+            let origHTML = span.getAttribute('data-original-time');
+            if (!origHTML) {
+                origHTML = span.innerHTML;
+                span.setAttribute('data-original-time', origHTML);
+            }
+            if (origHTML.length < 8) return;
+
+            if (appSettings.timeFormat.enabled) {
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = origHTML;
+                const textContent = tempDiv.textContent.trim();
+                const newTime = formatTimeStr(textContent);
+                if (newTime) {
+                    span.innerHTML = newTime;
+                    span.classList.remove('format-time', 'format-date');
+                } else {
+                    span.innerHTML = origHTML;
+                }
+            } else {
+                span.innerHTML = origHTML;
             }
         });
     }
@@ -1025,6 +1192,7 @@
                 formatStandingsCells();
                 applyRatings(ratingsMap);
                 applyUserAvatars();
+                wrapVirtualParticipationTime();
                 setTimeout(applyTimeFormatting, 500);
             }
         });
@@ -1127,57 +1295,57 @@
             const size = appSettings.avatarSize || 1.4;
             const img = document.createElement('img');
             img.src = url;
-            img.style.cssText = `width: ${size}em; height: ${size}em; border-radius: 50%; vertical-align: middle; margin-right: 4px; border: 1px solid rgba(0,0,0,0.1); display: inline-block; object-fit: cover;`;
+            img.className = 'cf-user-avatar-container cf-user-avatar';
+            img.style.cssText = `width: var(--cf-avatar-size); height: var(--cf-avatar-size); border-radius: 50%; vertical-align: middle; margin-right: 4px; border: 1px solid rgba(0,0,0,0.1); display: inline-block; object-fit: cover;`;
 
-            const isTableLayout = td && el.closest('table.status-frame-datatable, div.datatable table, table.rtable, table.standings') && !el.closest('.cf-team-formatted') && !el.closest('.ttypography');
+            const isTableLayout = td && el.closest('table.status-frame-datatable, div.datatable table, table.rtable') && !el.closest('.ttypography');
 
             if (isTableLayout) {
-                // Ensure the column containing the user is left-aligned
                 td.style.setProperty('text-align', 'left', 'important');
 
-                // Check if this link is already wrapped (happens if multiple users are on the same line)
-                let lineWrapper = el.closest('.cf-avatar-line-wrapper');
-                let avatarContainer;
-
-                if (!lineWrapper) {
-                    // Find the start of the current line (go backwards until <br> or td.firstChild)
-                    let lineStart = el;
-                    while (lineStart.previousSibling && lineStart.previousSibling.tagName !== 'BR' && !(lineStart.previousSibling.classList && lineStart.previousSibling.classList.contains('cf-avatar-line-wrapper'))) {
-                        lineStart = lineStart.previousSibling;
-                    }
-
-                    lineWrapper = document.createElement('span');
-                    lineWrapper.className = 'cf-avatar-line-wrapper';
-                    lineWrapper.style.cssText = 'white-space: nowrap; display: inline-block; max-width: 100%;';
-
-                    avatarContainer = document.createElement('span');
-                    avatarContainer.className = 'cf-avatar-container';
-                    avatarContainer.style.cssText = 'white-space: nowrap; vertical-align: middle; margin-right: 4px; display: inline-block;';
-
-                    lineStart.parentNode.insertBefore(lineWrapper, lineStart);
-                    lineWrapper.appendChild(avatarContainer);
-
-                    // Consume all nodes until the next <br>
-                    let current = lineWrapper.nextSibling;
-                    while (current && current.tagName !== 'BR') {
-                        const next = current.nextSibling;
-                        lineWrapper.appendChild(current);
-                        current = next;
-                    }
-                } else {
-                    // If multiple users are on the same line, append to the existing avatar container of that line
-                    avatarContainer = lineWrapper.querySelector('.cf-avatar-container');
-                }
-
-                // Wrap the image in an anchor so it links to the user profile
                 const anchor = document.createElement('a');
                 anchor.href = el.href;
                 anchor.title = el.textContent.trim();
+                anchor.className = 'cf-avatar-container';
                 anchor.appendChild(img);
 
-                avatarContainer.appendChild(anchor);
+                const wrapper = document.createElement('span');
+                wrapper.className = 'cf-avatar-line-wrapper';
+                wrapper.style.cssText = 'white-space: nowrap; display: inline-block; vertical-align: middle;';
+
+                let currentStart = el;
+                let nodesToWrap = [el];
+
+                while (currentStart.previousSibling) {
+                    let prev = currentStart.previousSibling;
+                    if (prev.tagName === 'BR') break;
+
+                    if (prev.nodeType === Node.TEXT_NODE) {
+                        if (/^[\s*]*$/.test(prev.textContent)) {
+                            nodesToWrap.unshift(prev);
+                            currentStart = prev;
+                        } else {
+                            break;
+                        }
+                    } else if (prev.nodeType === Node.ELEMENT_NODE) {
+                        const isInlineAndEmpty = ['SPAN', 'SMALL', 'SUP', 'SUB', 'I', 'B', 'EM', 'STRONG'].includes(prev.tagName) && /^[\s*]*$/.test(prev.textContent);
+                        const isFlagOrImg = prev.tagName === 'IMG' || prev.classList.contains('standings-flag');
+
+                        if (isInlineAndEmpty || isFlagOrImg) {
+                            nodesToWrap.unshift(prev);
+                            currentStart = prev;
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+
+                el.parentNode.insertBefore(wrapper, currentStart);
+                wrapper.appendChild(anchor);
+                nodesToWrap.forEach(node => wrapper.appendChild(node));
             } else {
-                // Fallback for non-table elements (e.g., profile page, header)
                 el.style.setProperty('white-space', 'nowrap', 'important');
                 el.insertBefore(img, el.firstChild);
             }
@@ -1190,6 +1358,7 @@
         formatStandingsCells();
         applyRatings(ratingsMap);
         applyUserAvatars();
+        wrapVirtualParticipationTime();
         setTimeout(applyTimeFormatting, 500);
         setupObserver(ratingsMap);
     }
@@ -1197,9 +1366,16 @@
     function createSettingsUI() {
         if (document.getElementById('cf-ratings-settings-btn')) return;
 
+        let applySettingsRealTime = () => {
+            appSettings.acBgColor = selectedColor;
+            localStorage.setItem('cf_ratings_settings', JSON.stringify(appSettings));
+        };
+        let checkIfChanged = () => { applySettingsRealTime(); };
+
         const i18n = {
             zh: {
                 title: 'CFSR 插件设置',
+                langLabel: '菜单语言',
                 displayStyleTitle: 'Ratings 展示形式',
                 styleBlock: '色块',
                 styleTag: '标签',
@@ -1221,10 +1397,13 @@
                 timeFormatTitle: '自定义时间格式',
                 timeFormatPreview: '预览: ',
                 timeFormatDisabled: '格式化已关闭',
-                saveBtn: '保存并刷新'
+                saveBtn: '保存并刷新',
+                footerGithub: 'GitHub 项目主页',
+                footerIssue: '反馈/报告问题'
             },
             en: {
                 title: 'CFSR Settings',
+                langLabel: 'Menu Language',
                 displayStyleTitle: 'Ratings Display Format',
                 styleBlock: 'Block',
                 styleTag: 'Tag',
@@ -1246,7 +1425,9 @@
                 timeFormatTitle: 'Custom Time Format',
                 timeFormatPreview: 'Preview: ',
                 timeFormatDisabled: 'Disabled',
-                saveBtn: 'Save & Reload'
+                saveBtn: 'Save & Reload',
+                footerGithub: 'GitHub Repository',
+                footerIssue: 'Report Bug / Issue'
             }
         };
         let currentLang = appSettings.lang || 'zh';
@@ -1311,46 +1492,108 @@
             margin-bottom: 5px;
         `;
 
-        const headerTitle = document.createElement('div');
-        headerTitle.style.cssText = 'font-size: 16px; font-weight: bold;';
+        const headerTitleWrapper = document.createElement('div');
+        headerTitleWrapper.style.cssText = 'display: flex; flex-direction: column; width: 100%;';
 
-        const langBtn = document.createElement('div');
-        langBtn.style.cssText = `
+        const headerTitleTop = document.createElement('div');
+        headerTitleTop.style.cssText = 'display: flex; align-items: center; justify-content: space-between; width: 100%;';
+
+        const headerTitle = document.createElement('div');
+        headerTitle.style.cssText = 'font-size: 18px; font-weight: 800;';
+        headerTitle.textContent = 'CF-Submissions-Ratings';
+
+        const versionTag = document.createElement('div');
+        versionTag.className = 'cf-version-tag';
+        versionTag.textContent = 'v1.5.5';
+
+        const tagsContainer = document.createElement('div');
+        tagsContainer.style.display = 'flex';
+        tagsContainer.appendChild(versionTag);
+
+        headerTitleTop.appendChild(headerTitle);
+        headerTitleTop.appendChild(tagsContainer);
+
+        const pluginSubtitleRow = document.createElement('div');
+        pluginSubtitleRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-top: 8px;';
+
+        const pluginSubtitle = document.createElement('div');
+        pluginSubtitle.id = 'cf-plugin-subtitle';
+        pluginSubtitle.style.cssText = 'font-size: 15px; color: #666;';
+
+        const deprecatedTag = document.createElement('div');
+        deprecatedTag.className = 'cf-version-tag';
+        deprecatedTag.style.cssText = 'background-color: #fff1f0; color: #cf1322; border-color: #ffa39e;';
+
+        pluginSubtitleRow.appendChild(pluginSubtitle);
+        pluginSubtitleRow.appendChild(deprecatedTag);
+
+        headerTitleWrapper.appendChild(headerTitleTop);
+        headerTitleWrapper.appendChild(pluginSubtitleRow);
+
+        header.appendChild(headerTitleWrapper);
+        modal.appendChild(header);
+
+        // Language Switch Setting
+        const rowLang = document.createElement('div');
+        rowLang.style.cssText = `display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;`;
+
+        const labelLang = document.createElement('span');
+        labelLang.style.cssText = 'font-size: 14px; font-weight: bold;';
+
+        const langSwitch = document.createElement('div');
+        langSwitch.style.cssText = `
             display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 10px;
-            background: #f5f5f5;
-            border-radius: 6px;
+            position: relative;
+            background: #f0f0f0;
+            border-radius: 12px;
+            padding: 2px;
             cursor: pointer;
             font-size: 12px;
-            font-weight: 500;
-            color: #555;
-            transition: all 0.2s ease;
+            font-weight: bold;
             user-select: none;
+            width: 140px;
         `;
-        const globeSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
-        langBtn.innerHTML = `${globeSvg} <span id="cf-lang-text"></span>`;
 
-        langBtn.onmouseover = () => { langBtn.style.background = '#e8e8e8'; langBtn.style.color = '#111'; };
-        langBtn.onmouseout = () => { langBtn.style.background = '#f5f5f5'; langBtn.style.color = '#555'; };
+        const langSlider = document.createElement('div');
+        langSlider.style.cssText = `
+            position: absolute;
+            top: 2px;
+            bottom: 2px;
+            width: calc(50% - 2px);
+            border-radius: 10px;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            box-sizing: border-box;
+            background: white;
+        `;
 
-        const updateLangUI = () => {
-            langBtn.querySelector('#cf-lang-text').textContent = currentLang === 'zh' ? '简体中文' : 'English';
+        const langZhBtn = document.createElement('div');
+        const langEnBtn = document.createElement('div');
+
+        const updateLangSwitchUI = () => {
+            const btnBase = 'flex: 1; text-align: center; padding: 2px 0; font-size: 12px; z-index: 1; transition: color 0.25s; box-sizing: border-box; margin: 1px;';
+            if (currentLang === 'zh') {
+                langSlider.style.left = '2px';
+                langZhBtn.style.cssText = `${btnBase} color: #1890ff;`;
+                langEnBtn.style.cssText = `${btnBase} color: #888;`;
+            } else {
+                langSlider.style.left = '50%';
+                langZhBtn.style.cssText = `${btnBase} color: #888;`;
+                langEnBtn.style.cssText = `${btnBase} color: #1890ff;`;
+            }
         };
-        updateLangUI();
+        updateLangSwitchUI();
 
-        let checkIfChanged = () => { };
+        langZhBtn.onclick = () => { currentLang = 'zh'; appSettings.lang = 'zh'; updateLangSwitchUI(); updateTexts(); checkIfChanged(); };
+        langEnBtn.onclick = () => { currentLang = 'en'; appSettings.lang = 'en'; updateLangSwitchUI(); updateTexts(); checkIfChanged(); };
 
-        langBtn.onclick = () => {
-            currentLang = currentLang === 'zh' ? 'en' : 'zh';
-            updateTexts();
-            checkIfChanged();
-        };
+        langSwitch.appendChild(langSlider);
+        langSwitch.appendChild(langZhBtn);
+        langSwitch.appendChild(langEnBtn);
 
-        header.appendChild(headerTitle);
-        header.appendChild(langBtn);
-        modal.appendChild(header);
+        rowLang.appendChild(labelLang);
+        rowLang.appendChild(langSwitch);
+        modal.appendChild(rowLang);
 
         // Display Style Setting
         const rowStyle = document.createElement('div');
@@ -1457,6 +1700,7 @@
 
             pickr.on('change', (color) => {
                 selectedColor = color.toRGBA().toString(0);
+                pickr.applyColor(true);
                 checkIfChanged();
             }).on('save', () => {
                 checkIfChanged();
@@ -1729,61 +1973,119 @@
 
         modal.appendChild(timeGroup);
 
-        const saveBtn = document.createElement('button');
-        saveBtn.style.cssText = `
-            margin-top: 10px;
-            padding: 10px;
-            background: #1890ff;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: background 0.2s;
-        `;
+        // Footer Section
+        const footerContainer = document.createElement('div');
+        footerContainer.style.cssText = 'border-top: 1px solid #eee; padding-top: 12px; margin-top: 5px; display: flex; flex-direction: column; gap: 8px;';
 
-        checkIfChanged = () => {
-            let changed = false;
-            if (currentLang !== appSettings.lang) changed = true;
-            if (currentDisplayStyle !== appSettings.displayStyle) changed = true;
-            if (selectedColor !== appSettings.acBgColor) changed = true;
-            if (timeToggle.checked !== appSettings.timeFormat.enabled) changed = true;
-            if ((timeInput.value || 'YYYY/MM/DD HH:mm') !== appSettings.timeFormat.format) changed = true;
-            if (cbAvatar.checked !== appSettings.show.userAvatar) changed = true;
-            if (cbFormatTeams.checked !== (appSettings.show.formatTeams !== false)) changed = true;
-            if (cbLangIcon.checked !== (appSettings.show.langIcon !== false)) changed = true;
-            if (cbShortVerdict.checked !== !!appSettings.show.shortVerdict) changed = true;
-            if (parseFloat(langIconSizeInput.value) !== (appSettings.langIconSize || 1.0)) changed = true;
-            if (parseFloat(avatarSizeInput.value) !== (appSettings.avatarSize || 1.4)) changed = true;
+        const footerLinks = document.createElement('div');
+        footerLinks.style.cssText = 'display: flex; justify-content: space-evenly; align-items: center; font-size: 13px;';
+
+        const createFooterLink = (iconSvg, url) => {
+            const a = document.createElement('a');
+            a.href = url;
+            a.target = '_blank';
+            a.style.cssText = 'color: #666; text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color 0.2s; cursor: pointer;';
+            const iconSpan = document.createElement('span');
+            iconSpan.style.cssText = 'display: flex; align-items: center; justify-content: center;';
+            iconSpan.innerHTML = iconSvg;
+            const textSpan = document.createElement('span');
+            a.appendChild(iconSpan);
+            a.appendChild(textSpan);
+            a.onmouseover = () => { a.style.color = '#1890ff'; };
+            a.onmouseout = () => { a.style.color = '#666'; };
+            return { a, textSpan };
+        };
+
+        const githubIcon = '<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>';
+        // const issueIconSvg = '<svg viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor"><path d="M643.657143 715.337143c-14.628571 7.314286-14.628571 21.942857-14.628572 36.571428v109.714286H526.628571V678.765714l95.085715-95.085714c7.314286-7.314286 7.314286-21.942857 0-29.257143-7.314286-7.314286-21.942857-7.314286-29.257143 0L512 642.194286 424.228571 554.422857c-7.314286-7.314286-21.942857-7.314286-29.257142 0-7.314286 7.314286-7.314286 21.942857 0 29.257143l95.085714 95.085714v175.542857H394.971429v-109.714285c0-14.628571-7.314286-29.257143-21.942858-36.571429-73.142857-43.885714-117.028571-124.342857-117.028571-219.428571 0-146.285714 117.028571-270.628571 256-270.628572s256 124.342857 256 270.628572c-7.314286 87.771429-51.2 175.542857-124.342857 226.742857zM512 181.394286c-160.914286 0-292.571429 138.971429-292.571429 307.2 0 109.714286 51.2 204.8 138.971429 263.314285v109.714286c0 21.942857 14.628571 43.885714 36.571429 43.885714h234.057142c21.942857 0 36.571429-21.942857 36.571429-43.885714v-109.714286c80.457143-58.514286 138.971429-153.6 138.971429-263.314285-7.314286-175.542857-131.657143-307.2-292.571429-307.2z m0-43.885715c7.314286 0 21.942857-7.314286 21.942857-21.942857V35.108571c0-14.628571-7.314286-21.942857-21.942857-21.942857-7.314286 0-21.942857 7.314286-21.942857 21.942857v80.457143c0 14.628571 7.314286 21.942857 21.942857 21.942857z m270.628571 607.085715c-7.314286-7.314286-21.942857-7.314286-29.257142 0s-7.314286 21.942857 0 29.257143l36.571428 43.885714c7.314286 7.314286 21.942857 7.314286 29.257143 0 7.314286-7.314286 7.314286-21.942857 0-29.257143l-36.571429-43.885714zM234.057143 210.651429c7.314286 7.314286 21.942857 7.314286 29.257143 0 7.314286-7.314286 7.314286-21.942857 0-29.257143L219.428571 144.822857c-7.314286-7.314286-21.942857-7.314286-29.257142 0-7.314286 7.314286-7.314286 21.942857 0 29.257143l43.885714 36.571429z m563.2-65.828572l-36.571429 43.885714c-7.314286 7.314286-7.314286 21.942857 0 29.257143 7.314286 7.314286 21.942857 7.314286 29.257143 0l36.571429-43.885714c7.314286-7.314286 7.314286-21.942857 0-29.257143-7.314286-7.314286-21.942857-7.314286-29.257143 0z m-563.2 599.771429l-36.571429 43.885714c-7.314286 7.314286-7.314286 21.942857 0 29.257143 7.314286 7.314286 21.942857 7.314286 29.257143 0l36.571429-43.885714c7.314286-7.314286 7.314286-21.942857 0-29.257143-14.628571-14.628571-21.942857-14.628571-29.257143 0z m702.171428-285.257143h-80.457142c-7.314286 0-21.942857 7.314286-21.942858 21.942857 0 14.628571 7.314286 21.942857 21.942858 21.942857h80.457142c7.314286 0 21.942857-7.314286 21.942858-21.942857 0-14.628571-14.628571-21.942857-21.942858-21.942857z m-775.314285 0H80.457143c-7.314286 0-21.942857 7.314286-21.942857 14.628571 0 14.628571 7.314286 21.942857 21.942857 21.942857h80.457143c7.314286 0 21.942857-7.314286 21.942857-21.942857-7.314286-7.314286-14.628571-14.628571-21.942857-14.628571z m416.914285 519.314286H438.857143c-7.314286 0-21.942857 7.314286-21.942857 21.942857 0 14.628571 7.314286 21.942857 21.942857 21.942857h138.971428c7.314286 0 21.942857-7.314286 21.942858-21.942857 0-7.314286-14.628571-21.942857-21.942858-21.942857z m29.257143-58.514286H409.6c-7.314286 0-21.942857 7.314286-21.942857 21.942857 0 14.628571 7.314286 21.942857 21.942857 21.942857h197.485714c7.314286 0 21.942857-7.314286 21.942857-21.942857 0-14.628571-14.628571-21.942857-21.942857-21.942857z"></path><path d="M424.228571 329.142857c-43.885714 29.257143-73.142857 73.142857-87.771428 131.657143 0 14.628571-14.628571 14.628571-21.942857 14.628571h-7.314286c-14.628571 0-21.942857-14.628571-14.628571-29.257142 14.628571-65.828571 58.514286-124.342857 109.714285-160.914286 7.314286-7.314286 21.942857-7.314286 29.257143 7.314286 7.314286 7.314286 7.314286 29.257143-7.314286 36.571428m336.457143 160.914286C760.685714 336.457143 650.971429 219.428571 512 219.428571S256 336.457143 256 490.057143c0 95.085714 43.885714 175.542857 117.028571 226.742857 14.628571 7.314286 21.942857 21.942857 21.942858 36.571429v109.714285h95.085714V680.228571L394.971429 585.142857c-7.314286-7.314286-7.314286-21.942857 0-29.257143 7.314286-7.314286 21.942857-7.314286 29.257142 0L512 643.657143l87.771429-87.771429c7.314286-7.314286 21.942857-7.314286 29.257142 0 7.314286 7.314286 7.314286 21.942857 0 29.257143L526.628571 680.228571v175.542858h95.085715v-109.714286c0-14.628571 7.314286-29.257143 21.942857-36.571429 73.142857-43.885714 117.028571-131.657143 117.028571-219.428571"></path></svg>';
+        const issueIconSvg = '<svg viewBox="0 0 1024 1024" width="16" height="16" fill="currentColor"><path d="M578.56 752.64c-25.6 5.12-61.44 10.24-61.44-25.6 0-30.72 10.24-66.56 20.48-97.28 5.12-10.24 10.24-25.6 10.24-35.84 15.36-56.32-5.12-107.52-66.56-107.52-25.6 0-81.92 10.24-92.16 40.96 0 5.12 5.12 10.24 10.24 5.12 51.2-15.36 61.44 20.48 51.2 66.56 0 10.24-5.12 20.48-10.24 30.72-15.36 46.08-40.96 112.64 0 148.48 35.84 30.72 92.16 15.36 128 0 10.24-5.12 15.36-10.24 15.36-20.48 5.12-5.12 0-10.24-5.12-5.12z"></path><path d="M588.8 56.32c-46.08-35.84-107.52-35.84-153.6 0C317.44 148.48 102.4 358.4 102.4 614.4c0 225.28 184.32 409.6 409.6 409.6s409.6-184.32 409.6-409.6c0-256-215.04-465.92-332.8-558.08zM512 947.2c-184.32 0-332.8-148.48-332.8-332.8 0-107.52 46.08-209.92 107.52-296.96 61.44-87.04 138.24-158.72 194.56-199.68 20.48-15.36 40.96-15.36 61.44 0 56.32 46.08 133.12 112.64 194.56 199.68 61.44 87.04 107.52 189.44 107.52 296.96 0 184.32-148.48 332.8-332.8 332.8z"></path><path d="M537.6 327.68c-30.72 0-56.32 25.6-56.32 56.32 0 30.72 30.72 56.32 56.32 56.32 30.72 0 56.32-25.6 56.32-56.32 5.12-30.72-25.6-56.32-56.32-56.32z"></path></svg>';
+
+        const githubLink = createFooterLink(githubIcon, 'https://github.com/GodExious/CF-Submissions-Ratings');
+        const issueLink = createFooterLink(issueIconSvg, 'https://github.com/GodExious/CF-Submissions-Ratings/issues');
+
+        footerLinks.appendChild(githubLink.a);
+        footerLinks.appendChild(issueLink.a);
+
+        const author = document.createElement('div');
+        author.style.cssText = 'font-size: 12px; color: #aaa; text-align: center;';
+
+        footerContainer.appendChild(footerLinks);
+        footerContainer.appendChild(author);
+        modal.appendChild(footerContainer);
+
+        applySettingsRealTime = () => {
+            appSettings.acBgColor = selectedColor;
+            if (!appSettings.show || typeof appSettings.show !== 'object') {
+                appSettings.show = { ...DEFAULT_SETTINGS.show };
+            }
+            appSettings.show.userAvatar = cbAvatar.checked;
+            appSettings.show.formatTeams = cbFormatTeams.checked;
+            appSettings.show.langIcon = cbLangIcon.checked;
+            appSettings.show.shortVerdict = cbShortVerdict.checked;
+            appSettings.avatarSize = parseFloat(avatarSizeInput.value);
+            appSettings.langIconSize = parseFloat(langIconSizeInput.value);
 
             showSettingsMap.forEach(item => {
-                if (checkBoxes[item.key] && checkBoxes[item.key].checked !== (appSettings.show[item.key] ?? DEFAULT_SETTINGS.show[item.key])) {
-                    changed = true;
+                appSettings.show[item.key] = checkBoxes[item.key].checked;
+            });
+
+            if (!appSettings.timeFormat || typeof appSettings.timeFormat !== 'object') {
+                appSettings.timeFormat = { ...DEFAULT_SETTINGS.timeFormat };
+            }
+            appSettings.timeFormat.enabled = timeToggle.checked;
+            appSettings.timeFormat.format = timeInput.value || 'YYYY/MM/DD HH:mm';
+
+            appSettings.lang = currentLang;
+            appSettings.displayStyle = currentDisplayStyle;
+
+            saveSettings(appSettings);
+            updateDynamicStyle();
+
+            document.querySelectorAll('.cf-rating-col, .cf-rating-standings-row th').forEach(cell => {
+                const rating = cell.dataset.rating;
+                if (rating) {
+                    applyRatingStyle(cell, rating);
                 }
             });
 
-            if (changed) {
-                saveBtn.style.background = '#1890ff';
-                saveBtn.style.cursor = 'pointer';
-                saveBtn.style.opacity = '1';
-                saveBtn.disabled = false;
-                saveBtn.onmouseover = () => saveBtn.style.background = '#40a9ff';
-                saveBtn.onmouseout = () => saveBtn.style.background = '#1890ff';
-            } else {
-                saveBtn.style.background = '#d9d9d9';
-                saveBtn.style.cursor = 'not-allowed';
-                saveBtn.style.opacity = '0.7';
-                saveBtn.disabled = true;
-                saveBtn.onmouseover = null;
-                saveBtn.onmouseout = null;
-            }
+            document.querySelectorAll('span.tag-box[data-cf-rating-added]').forEach(tag => {
+                const rating = parseInt(tag.dataset.rating, 10);
+                if (!isNaN(rating)) {
+                    const parentBox = tag.closest('.roundbox');
+                    applyProblemTagStyle(parentBox, tag, rating);
+                }
+            });
+
+            document.querySelectorAll('.cf-verdict-text').forEach(span => {
+                span.innerHTML = appSettings.show.shortVerdict ? span.dataset.short : span.dataset.original;
+            });
+
+            applyTimeFormatting();
+
+            const cells = document.querySelectorAll('table.standings .contestant-cell');
+            cells.forEach(cell => {
+                if (cell.hasAttribute('data-original-html')) {
+                    cell.innerHTML = cell.getAttribute('data-original-html');
+                    cell.style.removeProperty('white-space');
+                    cell.style.removeProperty('word-break');
+                    cell.style.removeProperty('vertical-align');
+                    cell.style.removeProperty('padding-top');
+                    cell.style.removeProperty('padding-bottom');
+                    cell.classList.remove('cf-team-formatted');
+                }
+                cell.classList.remove('cf-avatar-processed-cell');
+                cell.querySelectorAll('a[href^="/profile/"]').forEach(a => a.removeAttribute('data-cf-avatar-processed'));
+            });
+            formatStandingsCells();
+            applyUserAvatars();
         };
-        saveBtn.onmouseover = () => saveBtn.style.background = '#40a9ff';
-        saveBtn.onmouseout = () => saveBtn.style.background = '#1890ff';
 
         const updateTexts = () => {
-            headerTitle.textContent = t().title;
+            pluginSubtitle.textContent = t().title;
+            deprecatedTag.textContent = currentLang === 'zh' ? '@已停更' : '@Deprecated';
+            labelLang.textContent = t().langLabel;
+            langZhBtn.textContent = '简体中文';
+            langEnBtn.textContent = 'English';
             label1.textContent = t().acColor;
             labelAvatar.textContent = t().locUserAvatar;
             labelAvatarSize.textContent = t().locAvatarSize;
@@ -1799,46 +2101,26 @@
             labelStyle.textContent = t().displayStyleTitle;
             styleBlockBtn.textContent = t().styleBlock;
             styleTagBtn.textContent = t().styleTag;
-            saveBtn.textContent = t().saveBtn;
-            updatePreview();
-            updateLangUI();
-            checkIfChanged();
-        };
-        updateTexts();
+            githubLink.textSpan.textContent = t().footerGithub;
+            issueLink.textSpan.textContent = t().footerIssue;
 
-        saveBtn.onclick = () => {
-            appSettings.acBgColor = selectedColor;
-            if (!appSettings.show || typeof appSettings.show !== 'object') {
-                appSettings.show = { ...DEFAULT_SETTINGS.show };
+            const exiousLink = '<a href="https://github.com/GodExious" target="_blank" style="color: #888; text-decoration: none; font-weight: bold; transition: color 0.2s;">GodExious</a>';
+            const antigravityLink = '<a href="https://antigravity.google/" target="_blank" style="color: #888; text-decoration: none; font-weight: bold; transition: color 0.2s;">Antigravity</a>';
+
+            if (currentLang === 'zh') {
+                author.innerHTML = `由 ${exiousLink} & ${antigravityLink} 为❤️发电`;
+            } else {
+                author.innerHTML = `Crafted with ❤️ by ${exiousLink} & ${antigravityLink}`;
             }
-            appSettings.show.userAvatar = cbAvatar.checked;
-            appSettings.show.formatTeams = cbFormatTeams.checked;
-            appSettings.show.langIcon = cbLangIcon.checked;
-            appSettings.show.shortVerdict = cbShortVerdict.checked;
-            appSettings.avatarSize = parseFloat(avatarSizeInput.value);
-            appSettings.langIconSize = parseFloat(langIconSizeInput.value);
 
-            showSettingsMap.forEach(item => {
-                if (!appSettings.show || typeof appSettings.show !== 'object') {
-                    appSettings.show = { ...DEFAULT_SETTINGS.show };
-                }
-                appSettings.show[item.key] = checkBoxes[item.key].checked;
+            author.querySelectorAll('a').forEach(a => {
+                a.onmouseover = function () { this.style.color = '#1890ff'; };
+                a.onmouseout = function () { this.style.color = '#888'; };
             });
 
-            if (!appSettings.timeFormat || typeof appSettings.timeFormat !== 'object') {
-                appSettings.timeFormat = { ...DEFAULT_SETTINGS.timeFormat };
-            }
-            appSettings.timeFormat.enabled = timeToggle.checked;
-            appSettings.timeFormat.format = timeInput.value || 'YYYY/MM/DD HH:mm';
-
-            appSettings.lang = currentLang;
-            appSettings.displayStyle = currentDisplayStyle;
-
-            saveSettings(appSettings);
-            location.reload();
+            updatePreview();
         };
-
-        modal.appendChild(saveBtn);
+        updateTexts();
 
         btn.onclick = () => {
             modal.style.display = modal.style.display === 'none' ? 'flex' : 'none';
@@ -1848,12 +2130,133 @@
         container.appendChild(btn);
         document.body.appendChild(container);
     }
+    function showMigrationModal() {
+        const MODAL_KEY = 'cf_migration_modal_state';
+        const modalState = JSON.parse(localStorage.getItem(MODAL_KEY) || '{"dismissedUntil": 0, "permanentlyDismissed": false}');
+        
+        if (modalState.permanentlyDismissed || Date.now() < modalState.dismissedUntil) {
+            return;
+        }
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99999999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);';
+        
+        const modal = document.createElement('div');
+        const isDark = isDarkTheme();
+        modal.style.cssText = `background: ${isDark ? '#222' : '#fff'}; color: ${isDark ? '#eee' : '#333'}; padding: 30px; border-radius: 16px; width: 450px; max-width: 90vw; box-shadow: 0 10px 30px rgba(0,0,0,0.3); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;`;
+
+        let isZh = false; // Default to English regardless of settings
+        
+        const renderMainView = () => {
+            const tTitle = isZh ? '🚀 插件迁移公告' : '🚀 Plugin Migration Notice';
+            const tP1 = isZh ? '本项目（CF-Submissions-Ratings）已正式迁移并更名为 <b>Colorforces</b>。由于当前的开发方向与最初仅为了显示 Ratings 的目的已相差甚远，我们将在此开启全新的篇章。' : 'This project (CF-Submissions-Ratings) has officially migrated and rebranded as <b>Colorforces</b>. As our development focus has evolved significantly beyond simply showing ratings, we are starting a new chapter there.';
+            const tP2 = isZh ? '您依然可以正常使用当前的 v1.5.5 版本，但<b>本仓库将不再进行任何更新</b>。后续的所有新功能和优化迭代都将全部在 Colorforces 项目中进行。' : 'You can still use the current v1.5.5 normally, but <b>this repository will no longer receive any updates</b>. All future new features and optimizations will take place exclusively in the Colorforces project.';
+            const tP3 = isZh ? '如果您希望探索后续的新功能，请卸载当前插件，并请前往新项目下载最新版的插件！' : 'If you wish to explore future features, please uninstall the current plugin and head over to the new project to download the latest version!';
+            const tBtnInstall = isZh ? '立即前往安装新版 (Colorforces)' : 'Install New Version Now (Colorforces)';
+            const tBtnUninstall = isZh ? '⚠️ 冲突防范：若已安装新版本，请务必在脚本管理器中删除本插件' : '⚠️ Conflict Prevention: If already updated, please delete this script in your manager';
+            const tBtnLater = isZh ? '下次提醒我 (24h内不再提醒)' : 'Remind Me Later (Hide for 24h)';
+            const tBtnNever = isZh ? '保持使用旧版，不再提醒' : 'Keep using old version, do not remind again';
+            const langToggleText = isZh ? '🌐 English' : '🌐 简体中文';
+
+            modal.innerHTML = `
+                <div style="position: relative;">
+                    <div id="cf-mig-btn-lang" style="position: absolute; top: -5px; right: -5px; cursor: pointer; font-size: 13px; font-weight: bold; color: ${isDark ? '#ccc' : '#666'}; background: ${isDark ? '#333' : '#f0f0f0'}; padding: 6px 12px; border-radius: 20px; transition: all 0.2s;">${langToggleText}</div>
+                    <div style="font-size: 22px; font-weight: 800; margin-bottom: 15px; color: ${isDark ? '#fff' : '#000'}; padding-right: 100px;">${tTitle}</div>
+                </div>
+                <div style="font-size: 14px; line-height: 1.6; margin-bottom: 25px;">
+                    <p style="margin: 0 0 10px 0;">${tP1}</p>
+                    <p style="margin: 0 0 10px 0;">${tP2}</p>
+                    <p style="margin: 0; font-weight: bold; color: #1890ff;">${tP3}</p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <button disabled style="background: #ff4d4f; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: not-allowed; opacity: 0.85;">${tBtnUninstall}</button>
+                    <button id="cf-mig-btn-install" style="background: #1890ff; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s;">${tBtnInstall}</button>
+                    <button id="cf-mig-btn-later" style="background: ${isDark ? '#444' : '#f0f0f0'}; color: ${isDark ? '#ccc' : '#666'}; border: none; padding: 10px; border-radius: 8px; cursor: pointer; transition: background 0.2s;">${tBtnLater}</button>
+                    <button id="cf-mig-btn-never" style="background: transparent; color: #999; border: none; padding: 10px; cursor: pointer; text-decoration: underline;">${tBtnNever}</button>
+                </div>
+            `;
+
+            modal.querySelector('#cf-mig-btn-lang').onclick = () => {
+                isZh = !isZh;
+                renderMainView();
+            };
+
+            modal.querySelector('#cf-mig-btn-install').onclick = () => {
+                window.open('https://github.com/GodExious/Colorforces', '_blank');
+                document.body.removeChild(overlay);
+            };
+
+            modal.querySelector('#cf-mig-btn-later').onclick = () => {
+                document.body.removeChild(overlay);
+                localStorage.setItem(MODAL_KEY, JSON.stringify({ ...modalState, dismissedUntil: Date.now() + 24 * 60 * 60 * 1000 }));
+            };
+
+            modal.querySelector('#cf-mig-btn-never').onclick = renderConfirmView;
+
+            modal.querySelector('#cf-mig-btn-lang').onmouseover = function() { this.style.color = '#1890ff'; this.style.background = isDark ? '#444' : '#e6f7ff'; };
+            modal.querySelector('#cf-mig-btn-lang').onmouseout = function() { this.style.color = isDark ? '#ccc' : '#666'; this.style.background = isDark ? '#333' : '#f0f0f0'; };
+            modal.querySelector('#cf-mig-btn-install').onmouseover = function() { this.style.background = '#40a9ff'; };
+            modal.querySelector('#cf-mig-btn-install').onmouseout = function() { this.style.background = '#1890ff'; };
+            modal.querySelector('#cf-mig-btn-later').onmouseover = function() { this.style.background = isDark ? '#555' : '#e0e0e0'; };
+            modal.querySelector('#cf-mig-btn-later').onmouseout = function() { this.style.background = isDark ? '#444' : '#f0f0f0'; };
+            modal.querySelector('#cf-mig-btn-never').onmouseover = function() { this.style.color = '#ff4d4f'; };
+            modal.querySelector('#cf-mig-btn-never').onmouseout = function() { this.style.color = '#999'; };
+        };
+
+        const renderConfirmView = () => {
+            const tConfirmTitle = isZh ? '⚠️ 最终确认' : '⚠️ Final Confirmation';
+            const tConfirmQ = isZh ? '您是否确认不再更新？' : 'Are you sure you want to stop receiving updates?';
+            const tConfirmNote = isZh ? '备注：确认后，您将不会再收到关于新版插件的任何弹窗提醒。' : 'Note: Once confirmed, you will no longer receive any popup reminders regarding the new plugin version.';
+            const tBtnCancel = isZh ? '取消，返回上一步' : 'Cancel, go back';
+            const tBtnConfirm = isZh ? '确认不再提醒' : 'Confirm, do not remind again';
+            const langToggleText = isZh ? '🌐 English' : '🌐 简体中文';
+
+            modal.innerHTML = `
+                <div style="position: relative;">
+                    <div id="cf-mig-btn-lang" style="position: absolute; top: -5px; right: -5px; cursor: pointer; font-size: 13px; font-weight: bold; color: ${isDark ? '#ccc' : '#666'}; background: ${isDark ? '#333' : '#f0f0f0'}; padding: 6px 12px; border-radius: 20px; transition: all 0.2s;">${langToggleText}</div>
+                    <div style="font-size: 20px; font-weight: 800; margin-bottom: 15px; color: ${isDark ? '#fff' : '#000'}; padding-right: 100px;">${tConfirmTitle}</div>
+                </div>
+                <div style="font-size: 14px; line-height: 1.6; margin-bottom: 25px;">
+                    <p style="margin: 0 0 10px 0; font-weight: bold;">${tConfirmQ}</p>
+                    <p style="margin: 0; color: #cf1322;">${tConfirmNote}</p>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button id="cf-mig-btn-cancel" style="background: ${isDark ? '#444' : '#f0f0f0'}; color: ${isDark ? '#ccc' : '#666'}; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s;">${tBtnCancel}</button>
+                    <button id="cf-mig-btn-confirm" style="background: #cf1322; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: background 0.2s;">${tBtnConfirm}</button>
+                </div>
+            `;
+
+            modal.querySelector('#cf-mig-btn-lang').onclick = () => {
+                isZh = !isZh;
+                renderConfirmView();
+            };
+
+            modal.querySelector('#cf-mig-btn-cancel').onclick = renderMainView;
+            
+            modal.querySelector('#cf-mig-btn-confirm').onclick = () => {
+                document.body.removeChild(overlay);
+                localStorage.setItem(MODAL_KEY, JSON.stringify({ ...modalState, permanentlyDismissed: true }));
+            };
+
+            modal.querySelector('#cf-mig-btn-cancel').onmouseover = function() { this.style.background = isDark ? '#555' : '#e0e0e0'; };
+            modal.querySelector('#cf-mig-btn-cancel').onmouseout = function() { this.style.background = isDark ? '#444' : '#f0f0f0'; };
+            modal.querySelector('#cf-mig-btn-confirm').onmouseover = function() { this.style.background = '#ff4d4f'; };
+            modal.querySelector('#cf-mig-btn-confirm').onmouseout = function() { this.style.background = '#cf1322'; };
+            modal.querySelector('#cf-mig-btn-lang').onmouseover = function() { this.style.color = '#1890ff'; this.style.background = isDark ? '#444' : '#e6f7ff'; };
+            modal.querySelector('#cf-mig-btn-lang').onmouseout = function() { this.style.color = isDark ? '#ccc' : '#666'; this.style.background = isDark ? '#333' : '#f0f0f0'; };
+        };
+
+        renderMainView();
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+    }
 
     // Run when the page is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => { init(); createSettingsUI(); });
+        document.addEventListener('DOMContentLoaded', () => { init(); createSettingsUI(); showMigrationModal(); });
     } else {
         init();
         createSettingsUI();
+        showMigrationModal();
     }
 })();

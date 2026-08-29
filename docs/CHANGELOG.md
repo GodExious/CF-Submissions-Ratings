@@ -8,6 +8,16 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+### v1.5.5
+`2026-08-29 07:45`
+
+- **Announcement**: This project has officially migrated to [Colorforces](https://github.com/GodExious/Colorforces), as our features have evolved significantly beyond simply showing ratings. You may continue to use CF-Submissions-Ratings (CFSR) v1.5.5, but this repository will no longer receive updates. If you wish to receive future updates and explore new features, please uninstall this plugin from Tampermonkey and install the latest version from the new Colorforces repository.
+- Feature: Added real-time UI preview for the settings menu. Visual changes are now immediately reflected on the page without needing a refresh.
+- Optimization: Slightly beautified the settings menu UI and added project links and a quick feedback channel to the footer.
+- Optimization: Applied optional time formatting to the start time of virtual contests as well.
+
+---
+
 ### v1.5.4
 `2026-08-28 18:45`
 

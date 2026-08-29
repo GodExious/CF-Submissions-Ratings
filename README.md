@@ -5,8 +5,9 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/Status-Deprecated-red?style=flat-square" alt="Deprecated">
   <a href="docs/CHANGELOG.md">
-    <img src="https://img.shields.io/badge/Changelog-v1.5.4-orange?style=flat-square" alt="Changelog">
+    <img src="https://img.shields.io/badge/Changelog-v1.5.5-orange?style=flat-square" alt="Changelog">
   </a>
   <a href="https://github.com/GodExious/CF-Submissions-Ratings/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/GodExious/CF-Submissions-Ratings?style=flat-square&color=blue" alt="License">
@@ -15,6 +16,12 @@
     <img src="https://img.shields.io/badge/Userscript-Tampermonkey-green?style=flat-square" alt="Tampermonkey">
   </a>
 </p>
+
+> [!WARNING]  
+> 
+> 🚨 **PROJECT DEPRECATED AND MIGRATED** 🚨  
+> This repository is officially deprecated and will no longer receive any updates. The project has been completely rebranded and migrated to **[Colorforces](https://github.com/GodExious/Colorforces)**.
+> Please uninstall this plugin and head over to the new repository for all future features and updates!
 
 A lightweight, highly customizable, and aesthetics-focused Codeforces enhancement script. Take full control of your CF interface: seamlessly display global problem difficulty ratings, revitalize tables with user avatars and language icons, and abbreviate verdicts for the ultimate immersive coding experience.
 

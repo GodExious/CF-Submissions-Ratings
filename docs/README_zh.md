@@ -5,8 +5,9 @@
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/状态-已弃用-red?style=flat-square" alt="Deprecated">
   <a href="CHANGELOG_zh.md">
-    <img src="https://img.shields.io/badge/更新日志-v1.5.4-orange?style=flat-square" alt="Changelog">
+    <img src="https://img.shields.io/badge/更新日志-v1.5.5-orange?style=flat-square" alt="Changelog">
   </a>
   <a href="https://github.com/GodExious/CF-Submissions-Ratings/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/GodExious/CF-Submissions-Ratings?style=flat-square&color=blue" alt="License">
@@ -15,6 +16,12 @@
     <img src="https://img.shields.io/badge/Userscript-Tampermonkey-green?style=flat-square" alt="Tampermonkey">
   </a>
 </p>
+
+> [!WARNING]  
+> 
+> 🚨 **项目已停更并整体迁移** 🚨  
+> 本仓库已正式弃用，不再进行任何后续更新。该项目已全面重构并迁移至全新仓库：**[Colorforces](https://github.com/GodExious/Colorforces)**.
+> 请卸载当前旧版插件，并前往新仓库获取所有的后续新功能与优化迭代！
 
 一个轻量、极客且高度定制化的 Codeforces 增强脚本。全面接管并美化你的 CF 界面：无缝显示全局题目难度分、重塑代码语言图标与用户头像、极简缩写判题状态，为你提供极致的沉浸式刷题体验。
 
